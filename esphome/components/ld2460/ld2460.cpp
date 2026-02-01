@@ -120,12 +120,12 @@ template<size_t N> const char *find_str(const Uint8ToString (&arr)[N], uint8_t v
 
 void LD2460Component::setup() {
   ESP_LOGCONFIG(TAG, "Setting up LD2460...");
-  
+
   // Clear buffers
   this->buffer_pos_ = 0;
   memset(this->buffer_data_, 0, sizeof(this->buffer_data_));
   memset(this->target_info_, 0, sizeof(this->target_info_));
-  
+
   // Read version after a short delay
   this->set_timeout(1000, [this]() { this->read_version(); });
 }
@@ -133,7 +133,7 @@ void LD2460Component::setup() {
 void LD2460Component::dump_config() {
   ESP_LOGCONFIG(TAG, "LD2460:");
   LOG_UPDATE_INTERVAL(this);
-  
+
 #ifdef USE_TEXT_SENSOR
   LOG_TEXT_SENSOR("  ", "Version", this->version_text_sensor_);
 #endif
@@ -184,10 +184,10 @@ void LD2460Component::readline_(int readch) {
       if (this->buffer_pos_ >= 6) {
         // Get length (bytes 4-5, little endian)
         uint16_t len = this->buffer_data_[4] | (this->buffer_data_[5] << 8);
-        
+
         // Total frame length = header(4) + length(2) + data(len-7) + footer(4)
         uint16_t total_len = 4 + 2 + len - 7 + 4;
-        
+
         if (this->buffer_pos_ >= total_len) {
           // Check footer
           uint8_t footer_offset = total_len - 4;
@@ -207,7 +207,7 @@ void LD2460Component::readline_(int readch) {
       if (this->buffer_pos_ >= 6) {
         uint16_t len = this->buffer_data_[4] | (this->buffer_data_[5] << 8);
         uint16_t total_len = 4 + 2 + len - 7 + 4;
-        
+
         if (this->buffer_pos_ >= total_len) {
           uint8_t footer_offset = total_len - 4;
           if (this->buffer_data_[footer_offset] == CMD_FRAME_FOOTER_0 &&
@@ -243,7 +243,7 @@ void LD2460Component::handle_periodic_data_(const uint8_t *buffer, uint8_t len) 
   // Calculate number of targets: (total_len - header - len - func - footer) / 4
   uint16_t data_len = buffer[4] | (buffer[5] << 8);
   uint8_t num_targets = (data_len - 11) / 4;  // Each target is 4 bytes (X, Y)
-  
+
   if (num_targets > MAX_TARGETS) {
     num_targets = MAX_TARGETS;
   }
@@ -252,19 +252,19 @@ void LD2460Component::handle_periodic_data_(const uint8_t *buffer, uint8_t len) 
   uint8_t active_targets = 0;
   for (uint8_t i = 0; i < num_targets; i++) {
     uint8_t offset = 7 + (i * 4);  // Start after header(4) + len(2) + func(1)
-    
+
     if (offset + 3 < len - 4) {  // Ensure we don't read past footer
-      int16_t x = (int16_t)((buffer[offset + 1] << 8) | buffer[offset]);
-      int16_t y = (int16_t)((buffer[offset + 3] << 8) | buffer[offset + 2]);
-      
+      int16_t x = (int16_t) ((buffer[offset + 1] << 8) | buffer[offset]);
+      int16_t y = (int16_t) ((buffer[offset + 3] << 8) | buffer[offset + 2]);
+
       // Scale by 0.1 (multiply by 10 to convert to mm)
       this->target_info_[i].x = x * 10;
       this->target_info_[i].y = y * 10;
-      
+
       // Check if target is valid (non-zero position)
       if (x != 0 || y != 0) {
         active_targets++;
-        
+
 #ifdef USE_SENSOR
         // Publish X, Y coordinates
         if (this->target_x_sensors_[i] != nullptr) {
@@ -273,16 +273,17 @@ void LD2460Component::handle_periodic_data_(const uint8_t *buffer, uint8_t len) 
         if (this->target_y_sensors_[i] != nullptr) {
           this->target_y_sensors_[i]->publish_state(this->target_info_[i].y);
         }
-        
+
         // Calculate and publish distance
         if (this->target_distance_sensors_[i] != nullptr) {
           uint16_t distance = (uint16_t) sqrt(pow(this->target_info_[i].x, 2) + pow(this->target_info_[i].y, 2));
           this->target_distance_sensors_[i]->publish_state(distance);
         }
-        
+
         // Calculate and publish angle
         if (this->target_angle_sensors_[i] != nullptr) {
-          float angle = atan2((float) this->target_info_[i].y, (float) this->target_info_[i].x) * 180.0f / std::numbers::pi_v<float>;
+          float angle = atan2((float) this->target_info_[i].y, (float) this->target_info_[i].x) * 180.0f /
+                        std::numbers::pi_v<float>;
           this->target_angle_sensors_[i]->publish_state(angle);
         }
 #endif
@@ -319,26 +320,25 @@ bool LD2460Component::handle_ack_data_(const uint8_t *buffer, uint8_t len) {
 
   uint8_t command = buffer[6];
   uint8_t status = buffer[7];
-  
+
   ESP_LOGD(TAG, "ACK received - Command: 0x%02X, Status: 0x%02X", command, status);
 
   // Handle version response
   if (command == CMD_READ_VERSION && len >= 16) {
     this->installation_mode_ = buffer[7];
-    this->version_[0] = buffer[8];  // Year
-    this->version_[1] = buffer[9];  // Month
-    this->version_[2] = buffer[10]; // Major version
-    this->version_[3] = buffer[11]; // Minor version
-    
-    ESP_LOGI(TAG, "Version: 20%02d/%02d V%d.%d, Mode: %s", 
-             this->version_[0], this->version_[1], this->version_[2], this->version_[3],
-             find_str(INSTALLATION_MODE_BY_UINT, this->installation_mode_));
-    
+    this->version_[0] = buffer[8];   // Year
+    this->version_[1] = buffer[9];   // Month
+    this->version_[2] = buffer[10];  // Major version
+    this->version_[3] = buffer[11];  // Minor version
+
+    ESP_LOGI(TAG, "Version: 20%02d/%02d V%d.%d, Mode: %s", this->version_[0], this->version_[1], this->version_[2],
+             this->version_[3], find_str(INSTALLATION_MODE_BY_UINT, this->installation_mode_));
+
 #ifdef USE_TEXT_SENSOR
     if (this->version_text_sensor_ != nullptr) {
       char version_str[32];
-      snprintf(version_str, sizeof(version_str), "20%02d/%02d V%d.%d", 
-               this->version_[0], this->version_[1], this->version_[2], this->version_[3]);
+      snprintf(version_str, sizeof(version_str), "20%02d/%02d V%d.%d", this->version_[0], this->version_[1],
+               this->version_[2], this->version_[3]);
       this->version_text_sensor_->publish_state(version_str);
     }
 #endif
@@ -350,21 +350,21 @@ bool LD2460Component::handle_ack_data_(const uint8_t *buffer, uint8_t len) {
 void LD2460Component::send_command_(uint8_t command, const uint8_t *data, uint8_t data_len) {
   uint8_t buffer[64];
   uint8_t pos = 0;
-  
+
   // Header
   buffer[pos++] = CMD_FRAME_HEADER_0;
   buffer[pos++] = CMD_FRAME_HEADER_1;
   buffer[pos++] = CMD_FRAME_HEADER_2;
   buffer[pos++] = CMD_FRAME_HEADER_3;
-  
+
   // Length (total frame length - header - footer)
   uint16_t length = 12;  // Minimum frame: 4(header) + 2(len) + 1(cmd) + 1(data) + 4(footer) = 12
   buffer[pos++] = length & 0xFF;
   buffer[pos++] = (length >> 8) & 0xFF;
-  
+
   // Command
   buffer[pos++] = command;
-  
+
   // Data
   if (data != nullptr && data_len > 0) {
     memcpy(&buffer[pos], data, data_len);
@@ -372,16 +372,16 @@ void LD2460Component::send_command_(uint8_t command, const uint8_t *data, uint8_
   } else {
     buffer[pos++] = 0x01;  // Default data value
   }
-  
+
   // Footer
   buffer[pos++] = CMD_FRAME_FOOTER_0;
   buffer[pos++] = CMD_FRAME_FOOTER_1;
   buffer[pos++] = CMD_FRAME_FOOTER_2;
   buffer[pos++] = CMD_FRAME_FOOTER_3;
-  
+
   this->write_array(buffer, pos);
   this->flush();
-  
+
   ESP_LOGV(TAG, "Sent command 0x%02X", command);
 }
 
@@ -418,8 +418,8 @@ void LD2460Component::set_installation_mode(const char *state) {
 
 void LD2460Component::set_detection_distance(float value) {
   // Distance in meters * 100
-  uint16_t distance_cm = (uint16_t)(value * 100);
-  uint8_t data[2] = {(uint8_t)(distance_cm & 0xFF), (uint8_t)((distance_cm >> 8) & 0xFF)};
+  uint16_t distance_cm = (uint16_t) (value * 100);
+  uint8_t data[2] = {(uint8_t) (distance_cm & 0xFF), (uint8_t) ((distance_cm >> 8) & 0xFF)};
   ESP_LOGI(TAG, "Setting detection distance to %.2f m", value);
   // Note: This would need to be combined with angle in a SET_DETECTION_PARAMS command
   // For now, just log it
@@ -427,8 +427,8 @@ void LD2460Component::set_detection_distance(float value) {
 
 void LD2460Component::set_detection_angle(float value) {
   // Angle in degrees * 100
-  uint16_t angle = (uint16_t)(value * 100);
-  uint8_t data[2] = {(uint8_t)(angle & 0xFF), (uint8_t)((angle >> 8) & 0xFF)};
+  uint16_t angle = (uint16_t) (value * 100);
+  uint8_t data[2] = {(uint8_t) (angle & 0xFF), (uint8_t) ((angle >> 8) & 0xFF)};
   ESP_LOGI(TAG, "Setting detection angle to %.0f degrees", value);
   // Note: This would need to be combined with distance in a SET_DETECTION_PARAMS command
   // For now, just log it

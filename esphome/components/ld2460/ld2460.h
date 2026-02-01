@@ -32,8 +32,8 @@ namespace esphome::ld2460 {
 using namespace ld24xx;
 
 // Constants
-static constexpr uint8_t DEFAULT_PRESENCE_TIMEOUT = 5;  // Timeout to reset presence status 5 sec.
-static constexpr uint8_t MAX_TARGETS = 3;               // Max 3 Targets in LD2460
+static constexpr uint8_t DEFAULT_PRESENCE_TIMEOUT = 5;   // Timeout to reset presence status 5 sec.
+static constexpr uint8_t MAX_TARGETS = 3;                // Max 3 Targets in LD2460
 static constexpr uint16_t MAX_DETECTION_DISTANCE = 600;  // Max detection distance in cm (6m)
 
 // Target coordinate struct
