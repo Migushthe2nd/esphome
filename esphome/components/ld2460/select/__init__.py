@@ -5,7 +5,6 @@ from esphome.const import (
     CONF_BAUD_RATE,
     CONF_ID,
     ENTITY_CATEGORY_CONFIG,
-    ICON_THERMOMETER,
 )
 
 from .. import CONF_LD2460_ID, LD2460Component, ld2460_ns
@@ -15,6 +14,7 @@ CONF_INSTALLATION_MODE = "installation_mode"
 BaudRateSelect = ld2460_ns.class_("BaudRateSelect", select.Select)
 InstallationModeSelect = ld2460_ns.class_("InstallationModeSelect", select.Select)
 
+ICON_COGS = "mdi:cogs"
 ICON_ROTATE_3D_VARIANT = "mdi:rotate-3d-variant"
 
 CONFIG_SCHEMA = {
@@ -23,7 +23,7 @@ CONFIG_SCHEMA = {
     cv.Optional(CONF_BAUD_RATE): select.select_schema(
         BaudRateSelect,
         entity_category=ENTITY_CATEGORY_CONFIG,
-        icon=ICON_THERMOMETER,
+        icon=ICON_COGS,
     ),
     cv.Optional(CONF_INSTALLATION_MODE): select.select_schema(
         InstallationModeSelect,

@@ -323,7 +323,8 @@ bool LD2460Component::handle_ack_data_(const uint8_t *buffer, uint8_t len) {
 
   ESP_LOGD(TAG, "ACK received - Command: 0x%02X, Status: 0x%02X", command, status);
 
-  // Handle version response
+  // Handle version response (CMD_READ_VERSION = 0x0B)
+  // Protocol format in Table 14: [installation_mode, year, month, major, minor]
   if (command == CMD_READ_VERSION && len >= 16) {
     this->installation_mode_ = buffer[7];
     this->version_[0] = buffer[8];   // Year
@@ -344,6 +345,12 @@ bool LD2460Component::handle_ack_data_(const uint8_t *buffer, uint8_t len) {
 #endif
   }
 
+  // Handle installation mode response (CMD_READ_INSTALLATION_MODE = 0x0A)
+  if (command == CMD_READ_INSTALLATION_MODE && len >= 12) {
+    this->installation_mode_ = buffer[7];
+    ESP_LOGI(TAG, "Installation mode: %s", find_str(INSTALLATION_MODE_BY_UINT, this->installation_mode_));
+  }
+
   return true;
 }
 
@@ -357,8 +364,10 @@ void LD2460Component::send_command_(uint8_t command, const uint8_t *data, uint8_
   buffer[pos++] = CMD_FRAME_HEADER_2;
   buffer[pos++] = CMD_FRAME_HEADER_3;
 
-  // Length (total frame length - header - footer)
-  uint16_t length = 12;  // Minimum frame: 4(header) + 2(len) + 1(cmd) + 1(data) + 4(footer) = 12
+  // Length calculation: 7 (before footer) + data_len
+  // Frame: header(4) + length(2) + command(1) + data + footer(4)
+  // Length field represents: length(2) + command(1) + data + footer(4) = 7 + data_len
+  uint16_t length = 7 + data_len;
   buffer[pos++] = length & 0xFF;
   buffer[pos++] = (length >> 8) & 0xFF;
 
@@ -369,8 +378,6 @@ void LD2460Component::send_command_(uint8_t command, const uint8_t *data, uint8_
   if (data != nullptr && data_len > 0) {
     memcpy(&buffer[pos], data, data_len);
     pos += data_len;
-  } else {
-    buffer[pos++] = 0x01;  // Default data value
   }
 
   // Footer
@@ -417,21 +424,19 @@ void LD2460Component::set_installation_mode(const char *state) {
 }
 
 void LD2460Component::set_detection_distance(float value) {
-  // Distance in meters * 100
-  uint16_t distance_cm = (uint16_t) (value * 100);
-  uint8_t data[2] = {(uint8_t) (distance_cm & 0xFF), (uint8_t) ((distance_cm >> 8) & 0xFF)};
-  ESP_LOGI(TAG, "Setting detection distance to %.2f m", value);
-  // Note: This would need to be combined with angle in a SET_DETECTION_PARAMS command
-  // For now, just log it
+  // Distance in meters * 100 for protocol
+  // Note: This function is a placeholder. The full implementation would combine
+  // distance and angle into a single CMD_SET_DETECTION_PARAMS command.
+  ESP_LOGI(TAG, "Detection distance parameter: %.2f m (not yet implemented)", value);
+  // TODO: Implement CMD_SET_DETECTION_PARAMS command combining distance and angle
 }
 
 void LD2460Component::set_detection_angle(float value) {
-  // Angle in degrees * 100
-  uint16_t angle = (uint16_t) (value * 100);
-  uint8_t data[2] = {(uint8_t) (angle & 0xFF), (uint8_t) ((angle >> 8) & 0xFF)};
-  ESP_LOGI(TAG, "Setting detection angle to %.0f degrees", value);
-  // Note: This would need to be combined with distance in a SET_DETECTION_PARAMS command
-  // For now, just log it
+  // Angle in degrees * 100 for protocol
+  // Note: This function is a placeholder. The full implementation would combine
+  // distance and angle into a single CMD_SET_DETECTION_PARAMS command.
+  ESP_LOGI(TAG, "Detection angle parameter: %.0f degrees (not yet implemented)", value);
+  // TODO: Implement CMD_SET_DETECTION_PARAMS command combining distance and angle
 }
 
 void LD2460Component::read_version() {
