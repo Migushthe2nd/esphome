@@ -423,6 +423,47 @@ number:
     initial_value: 0
     entity_category: config
   
+  # Detection Distance - matches LD2450 naming
+  # Note: This parameter only applies to side-mount installation mode
+  - platform: template
+    name: "Max Distance"
+    id: distance
+    max_value: 800
+    min_value: 0
+    step: 1
+    unit_of_measurement: "cm"
+    mode: box
+    optimistic: false
+    restore_value: true
+    initial_value: 260
+    entity_category: config
+    icon: mdi:ruler
+    set_action:
+      - lambda: |-
+          // Convert cm to meters
+          id(ld2460_radar).set_detection_distance(x / 100.0f);
+    update_interval: never
+  
+  # Installation Angle - matches LD2450 naming
+  # Note: This parameter only applies to side-mount installation mode
+  - platform: template
+    name: "Installation Angle"
+    id: installation_angle_ui
+    unit_of_measurement: "º"
+    min_value: -45
+    max_value: 45
+    step: 1
+    mode: box
+    optimistic: false
+    restore_value: true
+    initial_value: 30
+    icon: "mdi:angle-acute"
+    entity_category: config
+    set_action:
+      - lambda: |-
+          id(ld2460_radar).set_detection_angle(x);
+    update_interval: never
+  
   # ============================================================================
   # Zone 1 Configuration - matches LD2450 naming
   # ============================================================================
