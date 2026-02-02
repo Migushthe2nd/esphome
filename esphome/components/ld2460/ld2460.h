@@ -77,6 +77,7 @@ class LD2460Component : public Component, public uart::UARTDevice {
   void set_detection_angle(float value);
   void read_version();
   void read_detection_params();
+  void read_all_info();  // Convenience: read version + detection params
 
 #ifdef USE_SENSOR
   void set_target_x_sensor(uint8_t target, sensor::Sensor *s);

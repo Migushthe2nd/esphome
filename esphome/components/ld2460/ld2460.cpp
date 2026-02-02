@@ -126,11 +126,8 @@ void LD2460Component::setup() {
   memset(this->buffer_data_, 0, sizeof(this->buffer_data_));
   memset(this->target_info_, 0, sizeof(this->target_info_));
 
-  // Read version and detection parameters after a short delay
-  this->set_timeout(1000, [this]() {
-    this->read_version();
-    this->read_detection_params();
-  });
+  // Read all device information after a short delay
+  this->set_timeout(1000, [this]() { this->read_all_info(); });
 }
 
 void LD2460Component::dump_config() {
@@ -503,6 +500,12 @@ void LD2460Component::read_detection_params() {
   ESP_LOGD(TAG, "Reading detection parameters...");
   uint8_t data = 0x01;
   this->send_command_(CMD_READ_DETECTION_PARAMS, &data, 1);
+}
+
+void LD2460Component::read_all_info() {
+  ESP_LOGD(TAG, "Reading all device information...");
+  this->read_version();
+  this->read_detection_params();
 }
 
 bool LD2460Component::get_timeout_status_(uint32_t check_millis) {
