@@ -76,6 +76,7 @@ class LD2460Component : public Component, public uart::UARTDevice {
   void set_detection_distance(float value);
   void set_detection_angle(float value);
   void read_version();
+  void read_detection_params();
 
 #ifdef USE_SENSOR
   void set_target_x_sensor(uint8_t target, sensor::Sensor *s);
@@ -86,6 +87,7 @@ class LD2460Component : public Component, public uart::UARTDevice {
 
  protected:
   void send_command_(uint8_t command, const uint8_t *data, uint8_t data_len);
+  void send_detection_params_();
   void handle_periodic_data_(const uint8_t *buffer, uint8_t len);
   bool handle_ack_data_(const uint8_t *buffer, uint8_t len);
   void readline_(int readch);
@@ -97,6 +99,8 @@ class LD2460Component : public Component, public uart::UARTDevice {
   uint8_t buffer_pos_ = 0;
   uint8_t version_[4] = {0, 0, 0, 0};  // Year, Month, Major, Minor
   uint8_t installation_mode_ = 1;      // 1 = side-mount, 2 = top-mount
+  float detection_distance_ = 2.6f;    // Default: 2.6 meters
+  float detection_angle_ = 30.0f;      // Default: 30 degrees
   Target target_info_[MAX_TARGETS];
 
 #ifdef USE_SENSOR

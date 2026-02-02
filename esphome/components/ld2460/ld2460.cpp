@@ -126,8 +126,11 @@ void LD2460Component::setup() {
   memset(this->buffer_data_, 0, sizeof(this->buffer_data_));
   memset(this->target_info_, 0, sizeof(this->target_info_));
 
-  // Read version after a short delay
-  this->set_timeout(1000, [this]() { this->read_version(); });
+  // Read version and detection parameters after a short delay
+  this->set_timeout(1000, [this]() {
+    this->read_version();
+    this->read_detection_params();
+  });
 }
 
 void LD2460Component::dump_config() {
@@ -351,6 +354,29 @@ bool LD2460Component::handle_ack_data_(const uint8_t *buffer, uint8_t len) {
     ESP_LOGI(TAG, "Installation mode: %s", find_str(INSTALLATION_MODE_BY_UINT, this->installation_mode_));
   }
 
+  // Handle detection parameters response (CMD_READ_DETECTION_PARAMS = 0x08)
+  // Protocol format in Table 8: [distance_low, distance_high, angle_low, angle_high]
+  if (command == CMD_READ_DETECTION_PARAMS && len >= 15) {
+    uint16_t distance_value = buffer[7] | (buffer[8] << 8);
+    uint16_t angle_value = buffer[9] | (buffer[10] << 8);
+    
+    this->detection_distance_ = distance_value / 100.0f;
+    this->detection_angle_ = angle_value / 100.0f;
+    
+    ESP_LOGI(TAG, "Detection params: distance=%.2fm, angle=%.0f°", this->detection_distance_, this->detection_angle_);
+  }
+
+  // Handle set detection parameters response (CMD_SET_DETECTION_PARAMS = 0x07)
+  if (command == CMD_SET_DETECTION_PARAMS && len >= 12) {
+    // Status byte indicates success/failure
+    // 0x00 = failure, 0x01 = success
+    if (status == 0x01) {
+      ESP_LOGI(TAG, "Detection parameters set successfully");
+    } else {
+      ESP_LOGW(TAG, "Failed to set detection parameters");
+    }
+  }
+
   return true;
 }
 
@@ -424,24 +450,51 @@ void LD2460Component::set_installation_mode(const char *state) {
 }
 
 void LD2460Component::set_detection_distance(float value) {
-  // Distance in meters * 100 for protocol
-  // Note: This function is a placeholder. The full implementation would combine
-  // distance and angle into a single CMD_SET_DETECTION_PARAMS command.
-  ESP_LOGI(TAG, "Detection distance parameter: %.2f m (not yet implemented)", value);
-  // TODO: Implement CMD_SET_DETECTION_PARAMS command combining distance and angle
+  // Store the distance value
+  this->detection_distance_ = value;
+  ESP_LOGI(TAG, "Setting detection distance to %.2f m", value);
+  // Send combined detection parameters command
+  this->send_detection_params_();
 }
 
 void LD2460Component::set_detection_angle(float value) {
-  // Angle in degrees * 100 for protocol
-  // Note: This function is a placeholder. The full implementation would combine
-  // distance and angle into a single CMD_SET_DETECTION_PARAMS command.
-  ESP_LOGI(TAG, "Detection angle parameter: %.0f degrees (not yet implemented)", value);
-  // TODO: Implement CMD_SET_DETECTION_PARAMS command combining distance and angle
+  // Store the angle value
+  this->detection_angle_ = value;
+  ESP_LOGI(TAG, "Setting detection angle to %.0f degrees", value);
+  // Send combined detection parameters command
+  this->send_detection_params_();
+}
+
+void LD2460Component::send_detection_params_() {
+  // Protocol: CMD_SET_DETECTION_PARAMS (0x07)
+  // Data: 4 bytes total
+  //   - 2 bytes: distance in meters * 100 (little-endian)
+  //   - 2 bytes: angle in degrees * 100 (little-endian)
+  
+  uint16_t distance_value = (uint16_t)(this->detection_distance_ * 100);
+  uint16_t angle_value = (uint16_t)(this->detection_angle_ * 100);
+  
+  uint8_t data[4];
+  data[0] = distance_value & 0xFF;         // Distance low byte
+  data[1] = (distance_value >> 8) & 0xFF;  // Distance high byte
+  data[2] = angle_value & 0xFF;            // Angle low byte
+  data[3] = (angle_value >> 8) & 0xFF;     // Angle high byte
+  
+  ESP_LOGD(TAG, "Sending detection params: distance=%.2fm (0x%04X), angle=%.0f° (0x%04X)",
+           this->detection_distance_, distance_value, this->detection_angle_, angle_value);
+  
+  this->send_command_(CMD_SET_DETECTION_PARAMS, data, 4);
 }
 
 void LD2460Component::read_version() {
   ESP_LOGD(TAG, "Reading version...");
   this->send_command_(CMD_READ_VERSION, nullptr, 0);
+}
+
+void LD2460Component::read_detection_params() {
+  ESP_LOGD(TAG, "Reading detection parameters...");
+  uint8_t data = 0x01;
+  this->send_command_(CMD_READ_DETECTION_PARAMS, &data, 1);
 }
 
 bool LD2460Component::get_timeout_status_(uint32_t check_millis) {
