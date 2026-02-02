@@ -100,170 +100,44 @@ ld2460:
 #   Units: millimeters (mm)
 #
 # Zone layout (default 4 zones):
-#   Zone 1: Living Room (center, near-mid range)
-#   Zone 2: Hallway (center, far range)
-#   Zone 3: Kitchen (right side)
-#   Zone 4: Bedroom (left side)
+#   Zone 1: Main detection zone (full area)
+#   Zone 2: Disabled by default
+#   Zone 3: Disabled by default
+#   Zone 4: Disabled by default
 
-globals:
-  # Zone 1 - Living Room (Center, Near-Mid Range)
-  - id: zone1_x1
-    type: int
-    initial_value: '-1500'  # Left edge: -1.5m
-    restore_value: false
-  - id: zone1_y1
-    type: int
-    initial_value: '0'      # Near edge: 0m (sensor position)
-    restore_value: false
-  - id: zone1_x2
-    type: int
-    initial_value: '1500'   # Right edge: +1.5m
-    restore_value: false
-  - id: zone1_y2
-    type: int
-    initial_value: '3000'   # Far edge: 3m
-    restore_value: false
-  
-  # Zone 2 - Hallway (Center, Far Range)
-  - id: zone2_x1
-    type: int
-    initial_value: '-800'   # Left edge: -0.8m
-    restore_value: false
-  - id: zone2_y1
-    type: int
-    initial_value: '3000'   # Near edge: 3m
-    restore_value: false
-  - id: zone2_x2
-    type: int
-    initial_value: '800'    # Right edge: +0.8m
-    restore_value: false
-  - id: zone2_y2
-    type: int
-    initial_value: '6000'   # Far edge: 6m
-    restore_value: false
-  
-  # Zone 3 - Kitchen (Right Side)
-  - id: zone3_x1
-    type: int
-    initial_value: '1500'   # Left edge: +1.5m
-    restore_value: false
-  - id: zone3_y1
-    type: int
-    initial_value: '0'      # Near edge: 0m
-    restore_value: false
-  - id: zone3_x2
-    type: int
-    initial_value: '3000'   # Right edge: +3m
-    restore_value: false
-  - id: zone3_y2
-    type: int
-    initial_value: '3000'   # Far edge: 3m
-    restore_value: false
-  
-  # Zone 4 - Bedroom (Left Side)
-  - id: zone4_x1
-    type: int
-    initial_value: '-3000'  # Left edge: -3m
-    restore_value: false
-  - id: zone4_y1
-    type: int
-    initial_value: '0'      # Near edge: 0m
-    restore_value: false
-  - id: zone4_x2
-    type: int
-    initial_value: '-1500'  # Right edge: -1.5m
-    restore_value: false
-  - id: zone4_y2
-    type: int
-    initial_value: '3000'   # Far edge: 3m
-    restore_value: false
+# No globals needed - using number entities directly like LD2450
 
 # ============================================================================
 # Text Sensors
 # ============================================================================
 
 text_sensor:
-  # Firmware Version
+  # Firmware Version - matches LD2450 naming
   - platform: ld2460
     ld2460_id: ld2460_radar
     version:
-      name: "Firmware Version"
+      name: "mmWave Firmware"
+      id: firmware_version
       entity_category: diagnostic
       icon: mdi:chip
-  
-  # Zone Status JSON - SINGLE sensor for ALL zone data
-  # Perfect for UI tool integration - no entity bloat!
-  - platform: template
-    name: "Zone Status JSON"
-    id: zone_status_json
-    update_interval: ${zone_update_interval}
-    icon: mdi:map-marker-multiple
-    lambda: |-
-      // Calculate zone occupancy and counts
-      int zone_counts[4] = {0, 0, 0, 0};
-      
-      // Check each target against all zones
-      for (int i = 0; i < 3; i++) {
-        auto target = id(ld2460_radar).get_target(i);
-        if (target.valid) {
-          int x = target.x;
-          int y = target.y;
-          
-          // Zone 1 check (Living Room)
-          if (x >= id(zone1_x1) && x <= id(zone1_x2) &&
-              y >= id(zone1_y1) && y <= id(zone1_y2)) {
-            zone_counts[0]++;
-          }
-          
-          // Zone 2 check (Hallway)
-          if (x >= id(zone2_x1) && x <= id(zone2_x2) &&
-              y >= id(zone2_y1) && y <= id(zone2_y2)) {
-            zone_counts[1]++;
-          }
-          
-          // Zone 3 check (Kitchen)
-          if (x >= id(zone3_x1) && x <= id(zone3_x2) &&
-              y >= id(zone3_y1) && y <= id(zone3_y2)) {
-            zone_counts[2]++;
-          }
-          
-          // Zone 4 check (Bedroom)
-          if (x >= id(zone4_x1) && x <= id(zone4_x2) &&
-              y >= id(zone4_y1) && y <= id(zone4_y2)) {
-            zone_counts[3]++;
-          }
-        }
-      }
-      
-      // Build JSON response
-      // Format: {"zones":[{"id":1,"name":"Living Room","count":0,"occupied":false},...]}
-      std::string json = "{\"zones\":[";
-      json += "{\"id\":1,\"name\":\"Living Room\",\"count\":" + std::to_string(zone_counts[0]) + 
-              ",\"occupied\":" + (zone_counts[0] > 0 ? "true" : "false") + "},";
-      json += "{\"id\":2,\"name\":\"Hallway\",\"count\":" + std::to_string(zone_counts[1]) + 
-              ",\"occupied\":" + (zone_counts[1] > 0 ? "true" : "false") + "},";
-      json += "{\"id\":3,\"name\":\"Kitchen\",\"count\":" + std::to_string(zone_counts[2]) + 
-              ",\"occupied\":" + (zone_counts[2] > 0 ? "true" : "false") + "},";
-      json += "{\"id\":4,\"name\":\"Bedroom\",\"count\":" + std::to_string(zone_counts[3]) + 
-              ",\"occupied\":" + (zone_counts[3] > 0 ? "true" : "false") + "}";
-      json += "]}";
-      
-      return json;
 
 # ============================================================================
 # Binary Sensors - Presence Detection
 # ============================================================================
 
 binary_sensor:
-  # Overall presence detection
+  # Overall presence detection - matches LD2450 naming
   - platform: ld2460
     ld2460_id: ld2460_radar
     has_target:
-      name: "Presence"
+      name: "Occupancy"
+      id: occupancy
       device_class: occupancy
       icon: mdi:motion-sensor
+      filters:
+        - delayed_off: !lambda return (id(off_delay).state * 1000);
   
-  # Individual Zone Occupancy Sensors
+  # Individual Zone Occupancy Sensors - matches LD2450 naming
   # Uses delayed_off to prevent flickering
   
   - platform: template
@@ -275,72 +149,97 @@ binary_sensor:
       for (int i = 0; i < 3; i++) {
         auto target = id(ld2460_radar).get_target(i);
         if (target.valid) {
-          if (target.x >= id(zone1_x1) && target.x <= id(zone1_x2) &&
-              target.y >= id(zone1_y1) && target.y <= id(zone1_y2)) {
+          if (target.x >= id(zone1_begin_x).state && target.x <= id(zone1_end_x).state &&
+              target.y >= id(zone1_begin_y).state && target.y <= id(zone1_end_y).state) {
             return true;
           }
         }
       }
       return false;
     filters:
-      - delayed_off: ${zone_delayed_off}
+      - delayed_off: !lambda return (id(zone_1_off_delay).state * 1000);
   
   - platform: template
     name: "Zone 2 Occupancy"
     id: zone2_occupancy
     device_class: occupancy
     icon: mdi:door
+    disabled_by_default: true
     lambda: |-
       for (int i = 0; i < 3; i++) {
         auto target = id(ld2460_radar).get_target(i);
         if (target.valid) {
-          if (target.x >= id(zone2_x1) && target.x <= id(zone2_x2) &&
-              target.y >= id(zone2_y1) && target.y <= id(zone2_y2)) {
+          if (target.x >= id(zone2_begin_x).state && target.x <= id(zone2_end_x).state &&
+              target.y >= id(zone2_begin_y).state && target.y <= id(zone2_end_y).state) {
             return true;
           }
         }
       }
       return false;
     filters:
-      - delayed_off: ${zone_delayed_off}
+      - delayed_off: !lambda return (id(zone_2_off_delay).state * 1000);
   
   - platform: template
     name: "Zone 3 Occupancy"
     id: zone3_occupancy
     device_class: occupancy
     icon: mdi:silverware-fork-knife
+    disabled_by_default: true
     lambda: |-
       for (int i = 0; i < 3; i++) {
         auto target = id(ld2460_radar).get_target(i);
         if (target.valid) {
-          if (target.x >= id(zone3_x1) && target.x <= id(zone3_x2) &&
-              target.y >= id(zone3_y1) && target.y <= id(zone3_y2)) {
+          if (target.x >= id(zone3_begin_x).state && target.x <= id(zone3_end_x).state &&
+              target.y >= id(zone3_begin_y).state && target.y <= id(zone3_end_y).state) {
             return true;
           }
         }
       }
       return false;
     filters:
-      - delayed_off: ${zone_delayed_off}
+      - delayed_off: !lambda return (id(zone_3_off_delay).state * 1000);
   
   - platform: template
     name: "Zone 4 Occupancy"
     id: zone4_occupancy
     device_class: occupancy
     icon: mdi:bed
+    disabled_by_default: true
     lambda: |-
       for (int i = 0; i < 3; i++) {
         auto target = id(ld2460_radar).get_target(i);
         if (target.valid) {
-          if (target.x >= id(zone4_x1) && target.x <= id(zone4_x2) &&
-              target.y >= id(zone4_y1) && target.y <= id(zone4_y2)) {
+          if (target.x >= id(zone4_begin_x).state && target.x <= id(zone4_end_x).state &&
+              target.y >= id(zone4_begin_y).state && target.y <= id(zone4_end_y).state) {
             return true;
           }
         }
       }
       return false;
     filters:
-      - delayed_off: ${zone_delayed_off}
+      - delayed_off: !lambda return (id(zone_4_off_delay).state * 1000);
+  
+  # Target Active sensors - matches LD2450 naming
+  - platform: template
+    name: "Target 1 Active"
+    id: target1_active
+    entity_category: diagnostic
+    lambda: |-
+      return id(ld2460_radar).get_target(0).valid;
+  
+  - platform: template
+    name: "Target 2 Active"
+    id: target2_active
+    entity_category: diagnostic
+    lambda: |-
+      return id(ld2460_radar).get_target(1).valid;
+  
+  - platform: template
+    name: "Target 3 Active"
+    id: target3_active
+    entity_category: diagnostic
+    lambda: |-
+      return id(ld2460_radar).get_target(2).valid;
 
 # ============================================================================
 # Sensors - Measurements and Diagnostics
@@ -470,15 +369,17 @@ button:
     entity_category: config
     icon: mdi:restart
   
-  # LD2460 specific buttons
+  # LD2460 specific buttons - matches LD2450 naming
   - platform: ld2460
     ld2460_id: ld2460_radar
     restart:
-      name: "Restart Sensor"
+      name: "Reboot mmWave Sensor"
+      id: reboot_mmwave_sensor
       entity_category: config
       icon: mdi:restart-alert
     factory_reset:
-      name: "Factory Reset Sensor"
+      name: "Factory Reset mmWave Sensor"
+      id: factory_reset_mmwave_sensor
       entity_category: config
       icon: mdi:restore-alert
 
@@ -506,296 +407,324 @@ select:
 # Number Entities - Zone Configuration
 # ============================================================================
 # These allow runtime configuration of zone boundaries from Home Assistant
-# Perfect for UI tool integration!
+# Matches LD2450 entity naming for configuration tool compatibility
 
 number:
+  # Occupancy off delay - matches LD2450
+  - platform: template
+    name: "Occupancy Off Delay"
+    id: off_delay
+    max_value: 600
+    min_value: 0
+    step: 1
+    optimistic: true
+    restore_value: true
+    unit_of_measurement: "s"
+    initial_value: 0
+    entity_category: config
+  
   # ============================================================================
-  # Zone 1 Configuration (Living Room)
+  # Zone 1 Configuration - matches LD2450 naming
   # ============================================================================
   
   - platform: template
-    name: "Zone 1 X1 (Left)"
-    id: zone1_x1_config
+    name: "Zone 1 Begin X"
+    id: zone1_begin_x
     entity_category: config
-    min_value: -6000
-    max_value: 6000
-    step: 100
+    max_value: 8000
+    min_value: -8000
+    step: 10
     unit_of_measurement: "mm"
     mode: box
     icon: mdi:arrow-left
     optimistic: true
     restore_value: true
-    initial_value: -1500
-    on_value:
-      then:
-        - lambda: 'id(zone1_x1) = (int)x;'
+    initial_value: -4000
   
   - platform: template
-    name: "Zone 1 Y1 (Near)"
-    id: zone1_y1_config
+    name: "Zone 1 End X"
+    id: zone1_end_x
     entity_category: config
-    min_value: 0
-    max_value: 6000
-    step: 100
+    max_value: 8000
+    min_value: -8000
+    step: 10
+    unit_of_measurement: "mm"
+    mode: box
+    icon: mdi:arrow-right
+    optimistic: true
+    restore_value: true
+    initial_value: 4000
+  
+  - platform: template
+    name: "Zone 1 Begin Y"
+    id: zone1_begin_y
+    entity_category: config
+    max_value: 8000
+    min_value: -1560
+    step: 10
     unit_of_measurement: "mm"
     mode: box
     icon: mdi:arrow-collapse-down
     optimistic: true
     restore_value: true
     initial_value: 0
-    on_value:
-      then:
-        - lambda: 'id(zone1_y1) = (int)x;'
   
   - platform: template
-    name: "Zone 1 X2 (Right)"
-    id: zone1_x2_config
+    name: "Zone 1 End Y"
+    id: zone1_end_y
     entity_category: config
-    min_value: -6000
-    max_value: 6000
-    step: 100
-    unit_of_measurement: "mm"
-    mode: box
-    icon: mdi:arrow-right
-    optimistic: true
-    restore_value: true
-    initial_value: 1500
-    on_value:
-      then:
-        - lambda: 'id(zone1_x2) = (int)x;'
-  
-  - platform: template
-    name: "Zone 1 Y2 (Far)"
-    id: zone1_y2_config
-    entity_category: config
-    min_value: 0
-    max_value: 6000
-    step: 100
-    unit_of_measurement: "mm"
-    mode: box
-    icon: mdi:arrow-collapse-up
-    optimistic: true
-    restore_value: true
-    initial_value: 3000
-    on_value:
-      then:
-        - lambda: 'id(zone1_y2) = (int)x;'
-  
-  # ============================================================================
-  # Zone 2 Configuration (Hallway)
-  # ============================================================================
-  
-  - platform: template
-    name: "Zone 2 X1 (Left)"
-    id: zone2_x1_config
-    entity_category: config
-    min_value: -6000
-    max_value: 6000
-    step: 100
-    unit_of_measurement: "mm"
-    mode: box
-    icon: mdi:arrow-left
-    optimistic: true
-    restore_value: true
-    initial_value: -800
-    on_value:
-      then:
-        - lambda: 'id(zone2_x1) = (int)x;'
-  
-  - platform: template
-    name: "Zone 2 Y1 (Near)"
-    id: zone2_y1_config
-    entity_category: config
-    min_value: 0
-    max_value: 6000
-    step: 100
-    unit_of_measurement: "mm"
-    mode: box
-    icon: mdi:arrow-collapse-down
-    optimistic: true
-    restore_value: true
-    initial_value: 3000
-    on_value:
-      then:
-        - lambda: 'id(zone2_y1) = (int)x;'
-  
-  - platform: template
-    name: "Zone 2 X2 (Right)"
-    id: zone2_x2_config
-    entity_category: config
-    min_value: -6000
-    max_value: 6000
-    step: 100
-    unit_of_measurement: "mm"
-    mode: box
-    icon: mdi:arrow-right
-    optimistic: true
-    restore_value: true
-    initial_value: 800
-    on_value:
-      then:
-        - lambda: 'id(zone2_x2) = (int)x;'
-  
-  - platform: template
-    name: "Zone 2 Y2 (Far)"
-    id: zone2_y2_config
-    entity_category: config
-    min_value: 0
-    max_value: 6000
-    step: 100
+    max_value: 8000
+    min_value: -1560
+    step: 10
     unit_of_measurement: "mm"
     mode: box
     icon: mdi:arrow-collapse-up
     optimistic: true
     restore_value: true
     initial_value: 6000
-    on_value:
-      then:
-        - lambda: 'id(zone2_y2) = (int)x;'
+  
+  - platform: template
+    name: "Zone 1 Occupancy Off Delay"
+    id: zone_1_off_delay
+    max_value: 800
+    min_value: 0
+    step: 1
+    optimistic: true
+    restore_value: true
+    unit_of_measurement: "s"
+    initial_value: 0
+    entity_category: config
   
   # ============================================================================
-  # Zone 3 Configuration (Kitchen)
+  # Zone 2 Configuration - matches LD2450 naming
   # ============================================================================
   
   - platform: template
-    name: "Zone 3 X1 (Left)"
-    id: zone3_x1_config
+    name: "Zone 2 Begin X"
+    id: zone2_begin_x
     entity_category: config
-    min_value: -6000
-    max_value: 6000
-    step: 100
+    max_value: 8000
+    min_value: -8000
+    step: 10
     unit_of_measurement: "mm"
     mode: box
     icon: mdi:arrow-left
     optimistic: true
     restore_value: true
-    initial_value: 1500
-    on_value:
-      then:
-        - lambda: 'id(zone3_x1) = (int)x;'
+    initial_value: -4000
+    disabled_by_default: true
   
   - platform: template
-    name: "Zone 3 Y1 (Near)"
-    id: zone3_y1_config
+    name: "Zone 2 End X"
+    id: zone2_end_x
     entity_category: config
-    min_value: 0
-    max_value: 6000
-    step: 100
+    max_value: 8000
+    min_value: -8000
+    step: 10
+    unit_of_measurement: "mm"
+    mode: box
+    icon: mdi:arrow-right
+    optimistic: true
+    restore_value: true
+    initial_value: 4000
+    disabled_by_default: true
+  
+  - platform: template
+    name: "Zone 2 Begin Y"
+    id: zone2_begin_y
+    entity_category: config
+    max_value: 8000
+    min_value: -1560
+    step: 10
     unit_of_measurement: "mm"
     mode: box
     icon: mdi:arrow-collapse-down
     optimistic: true
     restore_value: true
     initial_value: 0
-    on_value:
-      then:
-        - lambda: 'id(zone3_y1) = (int)x;'
+    disabled_by_default: true
   
   - platform: template
-    name: "Zone 3 X2 (Right)"
-    id: zone3_x2_config
+    name: "Zone 2 End Y"
+    id: zone2_end_y
     entity_category: config
-    min_value: -6000
-    max_value: 6000
-    step: 100
-    unit_of_measurement: "mm"
-    mode: box
-    icon: mdi:arrow-right
-    optimistic: true
-    restore_value: true
-    initial_value: 3000
-    on_value:
-      then:
-        - lambda: 'id(zone3_x2) = (int)x;'
-  
-  - platform: template
-    name: "Zone 3 Y2 (Far)"
-    id: zone3_y2_config
-    entity_category: config
-    min_value: 0
-    max_value: 6000
-    step: 100
+    max_value: 8000
+    min_value: -1560
+    step: 10
     unit_of_measurement: "mm"
     mode: box
     icon: mdi:arrow-collapse-up
     optimistic: true
     restore_value: true
-    initial_value: 3000
-    on_value:
-      then:
-        - lambda: 'id(zone3_y2) = (int)x;'
+    initial_value: 6000
+    disabled_by_default: true
+  
+  - platform: template
+    name: "Zone 2 Occupancy Off Delay"
+    id: zone_2_off_delay
+    max_value: 800
+    min_value: 0
+    step: 1
+    optimistic: true
+    restore_value: true
+    unit_of_measurement: "s"
+    initial_value: 0
+    entity_category: config
+    disabled_by_default: true
   
   # ============================================================================
-  # Zone 4 Configuration (Bedroom)
+  # Zone 3 Configuration - matches LD2450 naming
   # ============================================================================
   
   - platform: template
-    name: "Zone 4 X1 (Left)"
-    id: zone4_x1_config
+    name: "Zone 3 Begin X"
+    id: zone3_begin_x
     entity_category: config
-    min_value: -6000
-    max_value: 6000
-    step: 100
+    max_value: 8000
+    min_value: -8000
+    step: 10
     unit_of_measurement: "mm"
     mode: box
     icon: mdi:arrow-left
     optimistic: true
     restore_value: true
-    initial_value: -3000
-    on_value:
-      then:
-        - lambda: 'id(zone4_x1) = (int)x;'
+    initial_value: -4000
+    disabled_by_default: true
   
   - platform: template
-    name: "Zone 4 Y1 (Near)"
-    id: zone4_y1_config
+    name: "Zone 3 End X"
+    id: zone3_end_x
     entity_category: config
-    min_value: 0
-    max_value: 6000
-    step: 100
+    max_value: 8000
+    min_value: -8000
+    step: 10
+    unit_of_measurement: "mm"
+    mode: box
+    icon: mdi:arrow-right
+    optimistic: true
+    restore_value: true
+    initial_value: 4000
+    disabled_by_default: true
+  
+  - platform: template
+    name: "Zone 3 Begin Y"
+    id: zone3_begin_y
+    entity_category: config
+    max_value: 8000
+    min_value: -1560
+    step: 10
     unit_of_measurement: "mm"
     mode: box
     icon: mdi:arrow-collapse-down
     optimistic: true
     restore_value: true
     initial_value: 0
-    on_value:
-      then:
-        - lambda: 'id(zone4_y1) = (int)x;'
+    disabled_by_default: true
   
   - platform: template
-    name: "Zone 4 X2 (Right)"
-    id: zone4_x2_config
+    name: "Zone 3 End Y"
+    id: zone3_end_y
     entity_category: config
-    min_value: -6000
-    max_value: 6000
-    step: 100
-    unit_of_measurement: "mm"
-    mode: box
-    icon: mdi:arrow-right
-    optimistic: true
-    restore_value: true
-    initial_value: -1500
-    on_value:
-      then:
-        - lambda: 'id(zone4_x2) = (int)x;'
-  
-  - platform: template
-    name: "Zone 4 Y2 (Far)"
-    id: zone4_y2_config
-    entity_category: config
-    min_value: 0
-    max_value: 6000
-    step: 100
+    max_value: 8000
+    min_value: -1560
+    step: 10
     unit_of_measurement: "mm"
     mode: box
     icon: mdi:arrow-collapse-up
     optimistic: true
     restore_value: true
-    initial_value: 3000
-    on_value:
-      then:
-        - lambda: 'id(zone4_y2) = (int)x;'
+    initial_value: 6000
+    disabled_by_default: true
+  
+  - platform: template
+    name: "Zone 3 Occupancy Off Delay"
+    id: zone_3_off_delay
+    max_value: 800
+    min_value: 0
+    step: 1
+    optimistic: true
+    restore_value: true
+    unit_of_measurement: "s"
+    initial_value: 0
+    entity_category: config
+    disabled_by_default: true
+  
+  # ============================================================================
+  # Zone 4 Configuration - matches LD2450 naming
+  # ============================================================================
+  
+  - platform: template
+    name: "Zone 4 Begin X"
+    id: zone4_begin_x
+    entity_category: config
+    max_value: 8000
+    min_value: -8000
+    step: 10
+    unit_of_measurement: "mm"
+    mode: box
+    icon: mdi:arrow-left
+    optimistic: true
+    restore_value: true
+    initial_value: -4000
+    disabled_by_default: true
+  
+  - platform: template
+    name: "Zone 4 End X"
+    id: zone4_end_x
+    entity_category: config
+    max_value: 8000
+    min_value: -8000
+    step: 10
+    unit_of_measurement: "mm"
+    mode: box
+    icon: mdi:arrow-right
+    optimistic: true
+    restore_value: true
+    initial_value: 4000
+    disabled_by_default: true
+  
+  - platform: template
+    name: "Zone 4 Begin Y"
+    id: zone4_begin_y
+    entity_category: config
+    max_value: 8000
+    min_value: -1560
+    step: 10
+    unit_of_measurement: "mm"
+    mode: box
+    icon: mdi:arrow-collapse-down
+    optimistic: true
+    restore_value: true
+    initial_value: 0
+    disabled_by_default: true
+  
+  - platform: template
+    name: "Zone 4 End Y"
+    id: zone4_end_y
+    entity_category: config
+    max_value: 8000
+    min_value: -1560
+    step: 10
+    unit_of_measurement: "mm"
+    mode: box
+    icon: mdi:arrow-collapse-up
+    optimistic: true
+    restore_value: true
+    initial_value: 6000
+    disabled_by_default: true
+  
+  - platform: template
+    name: "Zone 4 Occupancy Off Delay"
+    id: zone_4_off_delay
+    max_value: 800
+    min_value: 0
+    step: 1
+    optimistic: true
+    restore_value: true
+    unit_of_measurement: "s"
+    initial_value: 0
+    entity_category: config
+    disabled_by_default: true
 
 # ============================================================================
 # EXAMPLE: Automations for Integration
