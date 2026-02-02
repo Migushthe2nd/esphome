@@ -355,14 +355,17 @@ bool LD2460Component::handle_ack_data_(const uint8_t *buffer, uint8_t len) {
   }
 
   // Handle detection parameters response (CMD_READ_DETECTION_PARAMS = 0x08)
-  // Protocol format in Table 8: [distance_low, distance_high, angle_low, angle_high]
+  // Protocol format in Table 8: response contains distance and angle at specific offsets
+  // Frame: [FD FC FB FA] [0x08] [len] [len] [distance_low] [distance_high] [angle_low] [angle_high] ...
   if (command == CMD_READ_DETECTION_PARAMS && len >= 15) {
+    // Offset 7-8: distance (little-endian, in cm * 100)
     uint16_t distance_value = buffer[7] | (buffer[8] << 8);
+    // Offset 9-10: angle (little-endian, in degrees * 100)
     uint16_t angle_value = buffer[9] | (buffer[10] << 8);
-    
+
     this->detection_distance_ = distance_value / 100.0f;
     this->detection_angle_ = angle_value / 100.0f;
-    
+
     ESP_LOGI(TAG, "Detection params: distance=%.2fm, angle=%.0f°", this->detection_distance_, this->detection_angle_);
   }
 
@@ -470,19 +473,24 @@ void LD2460Component::send_detection_params_() {
   // Data: 4 bytes total
   //   - 2 bytes: distance in meters * 100 (little-endian)
   //   - 2 bytes: angle in degrees * 100 (little-endian)
-  
-  uint16_t distance_value = (uint16_t)(this->detection_distance_ * 100);
-  uint16_t angle_value = (uint16_t)(this->detection_angle_ * 100);
-  
+
+  // Validate and convert distance (must be positive)
+  float distance = std::max(0.0f, this->detection_distance_);
+  uint16_t distance_value = (uint16_t) std::round(distance * 100.0f);
+
+  // Validate and convert angle (must be positive)
+  float angle = std::max(0.0f, this->detection_angle_);
+  uint16_t angle_value = (uint16_t) std::round(angle * 100.0f);
+
   uint8_t data[4];
   data[0] = distance_value & 0xFF;         // Distance low byte
   data[1] = (distance_value >> 8) & 0xFF;  // Distance high byte
   data[2] = angle_value & 0xFF;            // Angle low byte
   data[3] = (angle_value >> 8) & 0xFF;     // Angle high byte
-  
-  ESP_LOGD(TAG, "Sending detection params: distance=%.2fm (0x%04X), angle=%.0f° (0x%04X)",
-           this->detection_distance_, distance_value, this->detection_angle_, angle_value);
-  
+
+  ESP_LOGD(TAG, "Sending detection params: distance=%.2fm (0x%04X), angle=%.0f° (0x%04X)", distance, distance_value,
+           angle, angle_value);
+
   this->send_command_(CMD_SET_DETECTION_PARAMS, data, 4);
 }
 
