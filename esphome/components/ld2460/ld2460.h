@@ -40,6 +40,7 @@ static constexpr uint16_t MAX_DETECTION_DISTANCE = 600;  // Max detection distan
 struct Target {
   int16_t x;
   int16_t y;
+  bool valid;  // Whether this target has data
 };
 
 class LD2460Component : public Component, public uart::UARTDevice {
@@ -78,6 +79,23 @@ class LD2460Component : public Component, public uart::UARTDevice {
   void read_version();
   void read_detection_params();
   void read_all_info();  // Convenience: read version + detection params
+
+  // Get target data for use in lambdas (for zone calculations, etc.)
+  Target get_target(uint8_t index) const {
+    if (index < MAX_TARGETS) {
+      return target_info_[index];
+    }
+    return {0, 0, false};
+  }
+  uint8_t get_target_count() const {
+    uint8_t count = 0;
+    for (uint8_t i = 0; i < MAX_TARGETS; i++) {
+      if (target_info_[i].valid) {
+        count++;
+      }
+    }
+    return count;
+  }
 
 #ifdef USE_SENSOR
   void set_target_x_sensor(uint8_t target, sensor::Sensor *s);

@@ -250,6 +250,12 @@ void LD2460Component::handle_periodic_data_(const uint8_t *buffer, uint8_t len) 
 
   // Parse target data
   uint8_t active_targets = 0;
+  
+  // First, mark all targets as invalid
+  for (uint8_t i = 0; i < MAX_TARGETS; i++) {
+    this->target_info_[i].valid = false;
+  }
+  
   for (uint8_t i = 0; i < num_targets; i++) {
     uint8_t offset = 7 + (i * 4);  // Start after header(4) + len(2) + func(1)
 
@@ -263,6 +269,7 @@ void LD2460Component::handle_periodic_data_(const uint8_t *buffer, uint8_t len) 
 
       // Check if target is valid (non-zero position)
       if (x != 0 || y != 0) {
+        this->target_info_[i].valid = true;
         active_targets++;
 
 #ifdef USE_SENSOR
