@@ -132,7 +132,6 @@ void LD2460Component::setup() {
 
 void LD2460Component::dump_config() {
   ESP_LOGCONFIG(TAG, "LD2460:");
-  LOG_UPDATE_INTERVAL(this);
 
 #ifdef USE_TEXT_SENSOR
   LOG_TEXT_SENSOR("  ", "Version", this->version_text_sensor_);
@@ -141,13 +140,13 @@ void LD2460Component::dump_config() {
   LOG_BINARY_SENSOR("  ", "Target", this->target_binary_sensor_);
 #endif
 #ifdef USE_SENSOR
-  LOG_SENSOR("  ", "Target Count", this->target_count_sensor_);
+  LOG_SENSOR_WITH_DEDUP_SAFE("  ", "Target Count", this->target_count_sensor_);
   for (uint8_t i = 0; i < MAX_TARGETS; i++) {
     ESP_LOGCONFIG(TAG, "  Target %d:", i + 1);
-    LOG_SENSOR("    ", "X", this->target_x_sensors_[i]);
-    LOG_SENSOR("    ", "Y", this->target_y_sensors_[i]);
-    LOG_SENSOR("    ", "Angle", this->target_angle_sensors_[i]);
-    LOG_SENSOR("    ", "Distance", this->target_distance_sensors_[i]);
+    LOG_SENSOR_WITH_DEDUP_SAFE("    ", "X", this->target_x_sensors_[i]);
+    LOG_SENSOR_WITH_DEDUP_SAFE("    ", "Y", this->target_y_sensors_[i]);
+    LOG_SENSOR_WITH_DEDUP_SAFE("    ", "Angle", this->target_angle_sensors_[i]);
+    LOG_SENSOR_WITH_DEDUP_SAFE("    ", "Distance", this->target_distance_sensors_[i]);
   }
 #endif
 }
@@ -275,23 +274,23 @@ void LD2460Component::handle_periodic_data_(const uint8_t *buffer, uint8_t len) 
 #ifdef USE_SENSOR
         // Publish X, Y coordinates
         if (this->target_x_sensors_[i] != nullptr) {
-          this->target_x_sensors_[i]->publish_state(this->target_info_[i].x);
+          this->target_x_sensors_[i]->publish_state_if_not_dup(this->target_info_[i].x);
         }
         if (this->target_y_sensors_[i] != nullptr) {
-          this->target_y_sensors_[i]->publish_state(this->target_info_[i].y);
+          this->target_y_sensors_[i]->publish_state_if_not_dup(this->target_info_[i].y);
         }
 
         // Calculate and publish distance
         if (this->target_distance_sensors_[i] != nullptr) {
           uint16_t distance = (uint16_t) sqrt(pow(this->target_info_[i].x, 2) + pow(this->target_info_[i].y, 2));
-          this->target_distance_sensors_[i]->publish_state(distance);
+          this->target_distance_sensors_[i]->publish_state_if_not_dup(distance);
         }
 
         // Calculate and publish angle
         if (this->target_angle_sensors_[i] != nullptr) {
           float angle = atan2((float) this->target_info_[i].y, (float) this->target_info_[i].x) * 180.0f /
                         std::numbers::pi_v<float>;
-          this->target_angle_sensors_[i]->publish_state(angle);
+          this->target_angle_sensors_[i]->publish_state_if_not_dup(angle);
         }
 #endif
       }
@@ -301,7 +300,7 @@ void LD2460Component::handle_periodic_data_(const uint8_t *buffer, uint8_t len) 
 #ifdef USE_SENSOR
   // Publish target count
   if (this->target_count_sensor_ != nullptr) {
-    this->target_count_sensor_->publish_state(active_targets);
+    this->target_count_sensor_->publish_state_if_not_dup(active_targets);
   }
 #endif
 
@@ -522,25 +521,25 @@ bool LD2460Component::get_timeout_status_(uint32_t check_millis) {
 #ifdef USE_SENSOR
 void LD2460Component::set_target_x_sensor(uint8_t target, sensor::Sensor *s) {
   if (target < MAX_TARGETS) {
-    this->target_x_sensors_[target] = make_dedup_sensor<int16_t>(s);
+    this->target_x_sensors_[target] = new SensorWithDedup<int16_t>(s);
   }
 }
 
 void LD2460Component::set_target_y_sensor(uint8_t target, sensor::Sensor *s) {
   if (target < MAX_TARGETS) {
-    this->target_y_sensors_[target] = make_dedup_sensor<int16_t>(s);
+    this->target_y_sensors_[target] = new SensorWithDedup<int16_t>(s);
   }
 }
 
 void LD2460Component::set_target_angle_sensor(uint8_t target, sensor::Sensor *s) {
   if (target < MAX_TARGETS) {
-    this->target_angle_sensors_[target] = make_dedup_sensor<float>(s);
+    this->target_angle_sensors_[target] = new SensorWithDedup<float>(s);
   }
 }
 
 void LD2460Component::set_target_distance_sensor(uint8_t target, sensor::Sensor *s) {
   if (target < MAX_TARGETS) {
-    this->target_distance_sensors_[target] = make_dedup_sensor<uint16_t>(s);
+    this->target_distance_sensors_[target] = new SensorWithDedup<uint16_t>(s);
   }
 }
 #endif

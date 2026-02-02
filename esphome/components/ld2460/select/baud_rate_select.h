@@ -10,7 +10,7 @@ class BaudRateSelect : public select::Select, public Parented<LD2460Component> {
   BaudRateSelect() = default;
 
  protected:
-  void control(const std::string &value, size_t index) override;
+  void control(size_t index) override;
 };
 
 }  // namespace esphome::ld2460

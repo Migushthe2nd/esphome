@@ -10,7 +10,7 @@ class InstallationModeSelect : public select::Select, public Parented<LD2460Comp
   InstallationModeSelect() = default;
 
  protected:
-  void control(const std::string &value, size_t index) override;
+  void control(size_t index) override;
 };
 
 }  // namespace esphome::ld2460

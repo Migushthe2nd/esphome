@@ -2,9 +2,10 @@
 
 namespace esphome::ld2460 {
 
-void InstallationModeSelect::control(const std::string &value, size_t index) {
-  this->publish_state(value);
-  this->parent_->set_installation_mode(value.c_str());
+void InstallationModeSelect::control(size_t index) {
+  auto value = this->at(index);
+  this->publish_state(value.value());
+  this->parent_->set_installation_mode(value.value().c_str());
 }
 
 }  // namespace esphome::ld2460
