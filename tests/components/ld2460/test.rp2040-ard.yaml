@@ -1,3 +1,9 @@
+esphome:
+  name: test
+
+rp2040:
+  board: rpipicow
+
 uart:
   - id: uart_ld2460
     tx_pin: GPIO0
