@@ -4,7 +4,7 @@ from esphome.components import switch
 from esphome.const import (
     CONF_ID,
     ENTITY_CATEGORY_CONFIG,
-    ICON_RADAR,
+    ICON_MOTION_SENSOR,
 )
 from .. import CONF_LD2460_ID, LD2460Component, ld2460_ns
 
@@ -18,7 +18,7 @@ CONFIG_SCHEMA = {
     cv.Optional(CONF_REPORTING): switch.switch_schema(
         ReportingSwitch,
         entity_category=ENTITY_CATEGORY_CONFIG,
-        icon=ICON_RADAR,
+        icon=ICON_MOTION_SENSOR,
     ),
 }
 
