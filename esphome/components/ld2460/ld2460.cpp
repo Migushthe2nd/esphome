@@ -396,15 +396,14 @@ void LD2460Component::send_command_(uint8_t command, const uint8_t *data, uint8_
   buffer[pos++] = CMD_FRAME_HEADER_2;
   buffer[pos++] = CMD_FRAME_HEADER_3;
 
-  // Length calculation: 7 (before footer) + data_len
-  // Frame: header(4) + length(2) + command(1) + data + footer(4)
-  // Length field represents: length(2) + command(1) + data + footer(4) = 7 + data_len
-  uint16_t length = 7 + data_len;
+  // Command/Function code
+  buffer[pos++] = command;
+
+  // Length calculation: entire frame size
+  // Frame: header(4) + command(1) + length(2) + data(n) + footer(4) = 11 + n
+  uint16_t length = 11 + data_len;
   buffer[pos++] = length & 0xFF;
   buffer[pos++] = (length >> 8) & 0xFF;
-
-  // Command
-  buffer[pos++] = command;
 
   // Data
   if (data != nullptr && data_len > 0) {
@@ -426,12 +425,14 @@ void LD2460Component::send_command_(uint8_t command, const uint8_t *data, uint8_
 
 void LD2460Component::restart() {
   ESP_LOGI(TAG, "Restarting LD2460...");
-  this->send_command_(CMD_RESTART, nullptr, 0);
+  uint8_t data = 0x01;
+  this->send_command_(CMD_RESTART, &data, 1);
 }
 
 void LD2460Component::factory_reset() {
   ESP_LOGI(TAG, "Factory reset LD2460...");
-  this->send_command_(CMD_FACTORY_RESET, nullptr, 0);
+  uint8_t data = 0x01;
+  this->send_command_(CMD_FACTORY_RESET, &data, 1);
 }
 
 void LD2460Component::set_baud_rate(const char *state) {
@@ -499,7 +500,8 @@ void LD2460Component::send_detection_params_() {
 
 void LD2460Component::read_version() {
   ESP_LOGD(TAG, "Reading version...");
-  this->send_command_(CMD_READ_VERSION, nullptr, 0);
+  uint8_t data = 0x01;
+  this->send_command_(CMD_READ_VERSION, &data, 1);
 }
 
 void LD2460Component::read_detection_params() {
