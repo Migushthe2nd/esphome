@@ -20,6 +20,9 @@
 #ifdef USE_BUTTON
 #include "esphome/components/button/button.h"
 #endif
+#ifdef USE_SWITCH
+#include "esphome/components/switch/switch.h"
+#endif
 
 #include "esphome/components/ld24xx/ld24xx.h"
 #include "esphome/components/uart/uart.h"
@@ -65,6 +68,9 @@ class LD2460Component : public Component, public uart::UARTDevice {
   SUB_BUTTON(factory_reset)
   SUB_BUTTON(restart)
 #endif
+#ifdef USE_SWITCH
+  SUB_SWITCH(reporting)
+#endif
 
  public:
   void setup() override;
@@ -76,6 +82,7 @@ class LD2460Component : public Component, public uart::UARTDevice {
   void set_installation_mode(const char *state);
   void set_detection_distance(float value);
   void set_detection_angle(float value);
+  void enable_reporting(bool enable);
   void read_version();
   void read_detection_params();
   void read_all_info();  // Convenience: read version + detection params

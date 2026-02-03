@@ -384,6 +384,25 @@ button:
       icon: mdi:restore-alert
 
 # ============================================================================
+# Switch Entities - Configuration
+# ============================================================================
+
+switch:
+  - platform: ld2460
+    ld2460_id: ld2460_radar
+    
+    # Enable/Disable Reporting
+    # Controls whether the sensor sends periodic target data
+    # Useful for reducing UART traffic or debugging
+    reporting:
+      name: "mmWave Reporting"
+      id: mmwave_reporting
+      entity_category: config
+      icon: mdi:radar
+      # Note: Sensor reports by default, switch shows actual state
+      restore_mode: RESTORE_DEFAULT_ON
+
+# ============================================================================
 # Select Entities - Configuration
 # ============================================================================
 

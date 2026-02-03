@@ -165,6 +165,9 @@ void LD2460Component::readline_(int readch) {
   }
 
   uint8_t c = (uint8_t) readch;
+  
+  // Debug: log every received byte
+  ESP_LOGD(TAG, "Received byte: 0x%02X", c);
 
   // Add to buffer
   if (this->buffer_pos_ < sizeof(this->buffer_data_)) {
@@ -431,6 +434,12 @@ void LD2460Component::factory_reset() {
   ESP_LOGI(TAG, "Factory reset LD2460...");
   uint8_t data = 0x01;
   this->send_command_(CMD_FACTORY_RESET, &data, 1);
+}
+
+void LD2460Component::enable_reporting(bool enable) {
+  ESP_LOGI(TAG, "%s LD2460 reporting...", enable ? "Enabling" : "Disabling");
+  uint8_t data = enable ? 0x01 : 0x00;
+  this->send_command_(CMD_ENABLE_REPORTING, &data, 1);
 }
 
 void LD2460Component::set_baud_rate(const char *state) {
