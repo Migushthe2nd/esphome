@@ -10,6 +10,44 @@ A user implemented an LD2460 component for ESPHome but encountered a critical is
 - **UART debug configured** with correct delimiters `[0xF8, 0xF7, 0xF6, 0xF5]`
 - **Sensor powered** and getting warm (active)
 
+## Critical: Baud Rate Configuration
+
+**THE MOST COMMON ISSUE** is baud rate mismatch:
+
+### Default Baud Rates
+- **Out-of-box (factory default)**: Most LD2460 sensors ship at **256000 baud**
+- **After factory reset**: Protocol spec says **115200 baud**
+- **Your UART config MUST match** what the sensor is currently set to
+
+### How to Fix Baud Rate Issues
+
+**Symptom**: Commands sent (>>) but NO responses received (<<)
+
+**Solution**:
+1. **Try 256000 first** (most sensors ship at this rate):
+   ```yaml
+   uart:
+     tx_pin: GPIO17
+     rx_pin: GPIO16
+     baud_rate: 256000  # ← Start with this
+   ```
+
+2. **If that doesn't work**, try 115200:
+   ```yaml
+   uart:
+     baud_rate: 115200  # ← If sensor was factory reset
+   ```
+
+3. **Factory reset the sensor** to get to known state (115200)
+
+4. **Check logs** for baud rate hints:
+   ```
+   [C][ld2460:122]: Setting up LD2460...
+   [C][ld2460:123]:   Ensure UART baud rate matches sensor:
+   [C][ld2460:124]:     - Default (out-of-box): 256000
+   [C][ld2460:125]:     - After factory reset: 115200
+   ```
+
 ## What Was the Solution?
 
 Two fixes were required:
