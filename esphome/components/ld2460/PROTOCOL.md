@@ -465,7 +465,7 @@ From target X,Y coordinates, calculate:
 - [ ] Handle up to 3 targets
 
 ### Commands
-- [ ] Enable/disable reporting (0x06)
+- [x] Enable/disable reporting (0x06)
 - [ ] Set detection parameters (0x07) with proper encoding
 - [ ] Read detection parameters (0x08)
 - [ ] Set installation mode (0x09)

@@ -11,7 +11,7 @@
 
 | Command | Code | Status | Data Bytes | Frame Size |
 |---------|------|--------|------------|------------|
-| Enable/Disable Reporting | 0x06 | ⚪ Not Implemented | 1 | 12 |
+| Enable/Disable Reporting | 0x06 | ✅ VERIFIED | 1 | 12 |
 | Set Detection Parameters | 0x07 | ✅ VERIFIED | 4 | 15 |
 | Read Detection Parameters | 0x08 | ✅ VERIFIED | 1 | 12 |
 | Set Installation Mode | 0x09 | ✅ VERIFIED | 1 | 12 |
@@ -21,8 +21,8 @@
 | Set Baud Rate | 0x0E | ✅ VERIFIED | 1 | 12 |
 | Factory Reset | 0x10 | ✅ VERIFIED | 1 | 12 |
 
-**Implementation Rate**: 7/9 commands (77.8%)
-**Critical Commands**: 7/7 implemented (100%)
+**Implementation Rate**: 8/9 commands (88.9%)
+**Critical Commands**: 8/8 implemented (100%)
 
 ---
 
@@ -221,7 +221,7 @@ this->send_command_(CMD_FACTORY_RESET, &data, 1);
 
 ---
 
-### ⚪ 8. Enable/Disable Reporting (0x06)
+### ✅ 8. Enable/Disable Reporting (0x06)
 
 **Protocol Specification:**
 ```
@@ -229,14 +229,41 @@ FD FC FB FA  06  0C 00  [enable]  04 03 02 01
 ```
 - enable: 0x00 = Disable, 0x01 = Enable
 
-**Status:** Not Implemented
+**Implementation:** `enable_reporting(bool enable)`
+```cpp
+void LD2460Component::enable_reporting(bool enable) {
+  ESP_LOGI(TAG, "%s LD2460 reporting...", enable ? "Enabling" : "Disabling");
+  uint8_t data = enable ? 0x01 : 0x00;
+  this->send_command_(CMD_ENABLE_REPORTING, &data, 1);
+}
+```
 
-**Reason:** 
-- Sensor reports automatically by default
-- Not needed for normal operation
-- Can be added if future use cases require it
+**Verification:**
+- ✅ Frame format: Header + Command + Length + Data + Footer
+- ✅ Command byte: 0x06
+- ✅ Data byte: 0x01 (enable) or 0x00 (disable)
+- ✅ Length: 0x0C 00 (12 bytes total)
 
-**Impact:** None - sensor works fine without this command
+**Example Commands:**
+```
+Enable:  FD FC FB FA 06 0C 00 01 04 03 02 01
+Disable: FD FC FB FA 06 0C 00 00 04 03 02 01
+```
+
+**Switch Entity:**
+- Platform: ld2460
+- Entity name: "mmWave Reporting"
+- Entity category: config
+- Icon: mdi:radar
+- Restore mode: RESTORE_DEFAULT_ON
+
+**Use Cases:**
+- Reduce UART traffic when not monitoring
+- Power saving by disabling periodic reports
+- Debugging communication issues
+- Selective monitoring
+
+**Status:** ✅ FULLY IMPLEMENTED
 
 ---
 
