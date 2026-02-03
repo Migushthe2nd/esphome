@@ -517,6 +517,12 @@ void LD2460Component::read_detection_params() {
   this->send_command_(CMD_READ_DETECTION_PARAMS, &data, 1);
 }
 
+void LD2460Component::read_installation_mode() {
+  ESP_LOGD(TAG, "Reading installation mode...");
+  uint8_t data = 0x01;
+  this->send_command_(CMD_READ_INSTALLATION_MODE, &data, 1);
+}
+
 void LD2460Component::read_all_info() {
   ESP_LOGD(TAG, "Reading all device information...");
   this->read_version();

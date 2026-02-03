@@ -85,6 +85,7 @@ class LD2460Component : public Component, public uart::UARTDevice {
   void enable_reporting(bool enable);
   void read_version();
   void read_detection_params();
+  void read_installation_mode();
   void read_all_info();  // Convenience: read version + detection params
 
   // Get target data for use in lambdas (for zone calculations, etc.)
