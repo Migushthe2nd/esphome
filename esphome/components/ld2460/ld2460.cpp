@@ -179,17 +179,15 @@ void LD2460Component::readline_(int readch) {
   if (this->buffer_pos_ >= 4) {
     if (this->buffer_data_[0] == DATA_FRAME_HEADER_0 && this->buffer_data_[1] == DATA_FRAME_HEADER_1 &&
         this->buffer_data_[2] == DATA_FRAME_HEADER_2 && this->buffer_data_[3] == DATA_FRAME_HEADER_3) {
-      // We have a data frame header, check if we have enough data
-      if (this->buffer_pos_ >= 6) {
-        // Get length (bytes 4-5, little endian)
-        uint16_t len = this->buffer_data_[4] | (this->buffer_data_[5] << 8);
-
-        // Total frame length = header(4) + length(2) + data(len-7) + footer(4)
-        uint16_t total_len = 4 + 2 + len - 7 + 4;
+      // We have a data frame header, check if we have enough data for function + length
+      if (this->buffer_pos_ >= 7) {
+        // Frame structure: Header(4) + Function(1) + Length(2) + Data + Footer(4)
+        // Length field is at bytes 5-6 (little endian) and represents total frame length
+        uint16_t total_len = this->buffer_data_[5] | (this->buffer_data_[6] << 8);
 
         if (this->buffer_pos_ >= total_len) {
-          // Check footer
-          uint8_t footer_offset = total_len - 4;
+          // Check footer at end of frame
+          uint16_t footer_offset = total_len - 4;
           if (this->buffer_data_[footer_offset] == DATA_FRAME_FOOTER_0 &&
               this->buffer_data_[footer_offset + 1] == DATA_FRAME_FOOTER_1 &&
               this->buffer_data_[footer_offset + 2] == DATA_FRAME_FOOTER_2 &&
@@ -203,12 +201,12 @@ void LD2460Component::readline_(int readch) {
     } else if (this->buffer_data_[0] == CMD_FRAME_HEADER_0 && this->buffer_data_[1] == CMD_FRAME_HEADER_1 &&
                this->buffer_data_[2] == CMD_FRAME_HEADER_2 && this->buffer_data_[3] == CMD_FRAME_HEADER_3) {
       // Command frame (acknowledgment)
-      if (this->buffer_pos_ >= 6) {
-        uint16_t len = this->buffer_data_[4] | (this->buffer_data_[5] << 8);
-        uint16_t total_len = 4 + 2 + len - 7 + 4;
+      // Same structure: Header(4) + Function(1) + Length(2) + Data + Footer(4)
+      if (this->buffer_pos_ >= 7) {
+        uint16_t total_len = this->buffer_data_[5] | (this->buffer_data_[6] << 8);
 
         if (this->buffer_pos_ >= total_len) {
-          uint8_t footer_offset = total_len - 4;
+          uint16_t footer_offset = total_len - 4;
           if (this->buffer_data_[footer_offset] == CMD_FRAME_FOOTER_0 &&
               this->buffer_data_[footer_offset + 1] == CMD_FRAME_FOOTER_1 &&
               this->buffer_data_[footer_offset + 2] == CMD_FRAME_FOOTER_2 &&
