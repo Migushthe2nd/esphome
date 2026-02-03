@@ -10,9 +10,7 @@ from .. import CONF_LD2460_ID, LD2460Component, ld2460_ns
 
 CONF_REPORTING = "reporting"
 
-ReportingSwitch = ld2460_ns.class_(
-    "ReportingSwitch", switch.Switch, cg.Parented.template(LD2460Component)
-)
+ReportingSwitch = ld2460_ns.class_("ReportingSwitch", switch.Switch)
 
 CONFIG_SCHEMA = {
     cv.GenerateID(CONF_ID): cv.declare_id(cg.EntityBase),
