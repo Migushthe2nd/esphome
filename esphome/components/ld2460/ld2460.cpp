@@ -126,8 +126,14 @@ void LD2460Component::setup() {
   memset(this->buffer_data_, 0, sizeof(this->buffer_data_));
   memset(this->target_info_, 0, sizeof(this->target_info_));
 
-  // Enable reporting and read all device information after a short delay
+  // Restart sensor and enable reporting after delay (similar to LD2450 approach)
   this->set_timeout(1000, [this]() {
+    ESP_LOGI(TAG, "Restarting sensor to clear any stuck state...");
+    this->restart();
+  });
+  
+  this->set_timeout(2500, [this]() {
+    ESP_LOGI(TAG, "Enabling reporting and reading device info...");
     this->enable_reporting(true);
     this->read_all_info();
   });
@@ -155,8 +161,14 @@ void LD2460Component::dump_config() {
 }
 
 void LD2460Component::loop() {
+  const uint8_t available_bytes = this->available();
+  if (available_bytes > 0) {
+    ESP_LOGV(TAG, "UART has %d bytes available", available_bytes);
+  }
   while (this->available()) {
-    this->readline_(this->read());
+    int byte = this->read();
+    ESP_LOGV(TAG, "Read byte from UART: 0x%02X (or -1 if error)", byte);
+    this->readline_(byte);
   }
 }
 
