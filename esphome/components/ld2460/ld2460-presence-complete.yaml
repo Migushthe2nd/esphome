@@ -1,0 +1,850 @@
+# LD2460 Presence Detection - Complete Configuration
+# Production-ready ESPHome configuration for HLK-LD2460 24GHz radar sensor
+# 
+# This configuration provides:
+# - Complete sensor entity exposure
+# - Software-based zone system (4 zones, easily extensible)
+# - JSON zone reporting for UI tools
+# - Individual zone occupancy sensors
+# - Runtime-configurable zone boundaries
+# - Target tracking and diagnostics
+# - Clean, maintainable structure
+#
+# Hardware Setup:
+# - ESP32 (recommended) or ESP8266
+# - LD2460 radar sensor connected via UART
+# - Default pins: TX=GPIO4, RX=GPIO5
+#
+# Usage:
+# 1. Customize substitutions below for your setup
+# 2. Enable/disable optional sensors as needed
+# 3. Configure zone boundaries in Home Assistant
+# 4. Use zone_status_json for UI tool integration
+
+substitutions:
+  # Device Configuration
+  device_name: "ld2460-presence"
+  device_friendly_name: "LD2460 Presence Sensor"
+  
+  # UART Pins
+  uart_tx_pin: GPIO4
+  uart_rx_pin: GPIO5
+  uart_baud_rate: "115200"
+  
+  # Zone Update Settings
+  zone_update_interval: "250ms"
+  zone_delayed_off: "5s"
+  
+  # Target Settings
+  target_timeout: "5s"
+
+esphome:
+  name: ${device_name}
+  friendly_name: ${device_friendly_name}
+  platform: ESP32
+  board: esp32dev
+
+# WiFi Configuration
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  
+  # Enable fallback hotspot in case WiFi connection fails
+  ap:
+    ssid: "${device_friendly_name} Fallback"
+    password: !secret ap_password
+
+# Enable logging
+logger:
+  level: INFO
+  # Reduce UART logging to avoid conflicts
+  logs:
+    sensor: INFO
+    binary_sensor: INFO
+    text_sensor: INFO
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+# Enable OTA updates
+ota:
+  password: !secret ota_password
+
+# Web server for local access
+web_server:
+  port: 80
+
+# UART Configuration for LD2460
+uart:
+  tx_pin: ${uart_tx_pin}
+  rx_pin: ${uart_rx_pin}
+  baud_rate: ${uart_baud_rate}
+  # Important: Use hardware UART for ESP32
+  # For ESP8266, software UART is used automatically
+
+# ============================================================================
+# LD2460 Component Configuration
+# ============================================================================
+
+ld2460:
+  id: ld2460_radar
+
+# ============================================================================
+# Zone Configuration - Software-based zones calculated on ESP32
+# ============================================================================
+# Coordinate system:
+#   X-axis: Left (-) to Right (+), centered at sensor (0)
+#   Y-axis: Near (0) to Far (+), distance from sensor
+#   Units: millimeters (mm)
+#
+# Zone layout (default 4 zones):
+#   Zone 1: Main detection zone (full area)
+#   Zone 2: Disabled by default
+#   Zone 3: Disabled by default
+#   Zone 4: Disabled by default
+
+# No globals needed - using number entities directly like LD2450
+
+# ============================================================================
+# Text Sensors
+# ============================================================================
+
+text_sensor:
+  # Firmware Version - matches LD2450 naming
+  - platform: ld2460
+    ld2460_id: ld2460_radar
+    version:
+      name: "mmWave Firmware"
+      id: firmware_version
+      entity_category: diagnostic
+      icon: mdi:chip
+
+# ============================================================================
+# Binary Sensors - Presence Detection
+# ============================================================================
+
+binary_sensor:
+  # Overall presence detection - matches LD2450 naming
+  - platform: ld2460
+    ld2460_id: ld2460_radar
+    has_target:
+      name: "Occupancy"
+      id: occupancy
+      device_class: occupancy
+      icon: mdi:motion-sensor
+      filters:
+        - delayed_off: !lambda return (id(off_delay).state * 1000);
+  
+  # Individual Zone Occupancy Sensors - matches LD2450 naming
+  # Uses delayed_off to prevent flickering
+  
+  - platform: template
+    name: "Zone 1 Occupancy"
+    id: zone1_occupancy
+    device_class: occupancy
+    icon: mdi:sofa
+    lambda: |-
+      for (int i = 0; i < 3; i++) {
+        auto target = id(ld2460_radar).get_target(i);
+        if (target.valid) {
+          if (target.x >= id(zone1_begin_x).state && target.x <= id(zone1_end_x).state &&
+              target.y >= id(zone1_begin_y).state && target.y <= id(zone1_end_y).state) {
+            return true;
+          }
+        }
+      }
+      return false;
+    filters:
+      - delayed_off: !lambda return (id(zone_1_off_delay).state * 1000);
+  
+  - platform: template
+    name: "Zone 2 Occupancy"
+    id: zone2_occupancy
+    device_class: occupancy
+    icon: mdi:door
+    disabled_by_default: true
+    lambda: |-
+      for (int i = 0; i < 3; i++) {
+        auto target = id(ld2460_radar).get_target(i);
+        if (target.valid) {
+          if (target.x >= id(zone2_begin_x).state && target.x <= id(zone2_end_x).state &&
+              target.y >= id(zone2_begin_y).state && target.y <= id(zone2_end_y).state) {
+            return true;
+          }
+        }
+      }
+      return false;
+    filters:
+      - delayed_off: !lambda return (id(zone_2_off_delay).state * 1000);
+  
+  - platform: template
+    name: "Zone 3 Occupancy"
+    id: zone3_occupancy
+    device_class: occupancy
+    icon: mdi:silverware-fork-knife
+    disabled_by_default: true
+    lambda: |-
+      for (int i = 0; i < 3; i++) {
+        auto target = id(ld2460_radar).get_target(i);
+        if (target.valid) {
+          if (target.x >= id(zone3_begin_x).state && target.x <= id(zone3_end_x).state &&
+              target.y >= id(zone3_begin_y).state && target.y <= id(zone3_end_y).state) {
+            return true;
+          }
+        }
+      }
+      return false;
+    filters:
+      - delayed_off: !lambda return (id(zone_3_off_delay).state * 1000);
+  
+  - platform: template
+    name: "Zone 4 Occupancy"
+    id: zone4_occupancy
+    device_class: occupancy
+    icon: mdi:bed
+    disabled_by_default: true
+    lambda: |-
+      for (int i = 0; i < 3; i++) {
+        auto target = id(ld2460_radar).get_target(i);
+        if (target.valid) {
+          if (target.x >= id(zone4_begin_x).state && target.x <= id(zone4_end_x).state &&
+              target.y >= id(zone4_begin_y).state && target.y <= id(zone4_end_y).state) {
+            return true;
+          }
+        }
+      }
+      return false;
+    filters:
+      - delayed_off: !lambda return (id(zone_4_off_delay).state * 1000);
+  
+  # Target Active sensors - matches LD2450 naming
+  - platform: template
+    name: "Target 1 Active"
+    id: target1_active
+    entity_category: diagnostic
+    lambda: |-
+      return id(ld2460_radar).get_target(0).valid;
+  
+  - platform: template
+    name: "Target 2 Active"
+    id: target2_active
+    entity_category: diagnostic
+    lambda: |-
+      return id(ld2460_radar).get_target(1).valid;
+  
+  - platform: template
+    name: "Target 3 Active"
+    id: target3_active
+    entity_category: diagnostic
+    lambda: |-
+      return id(ld2460_radar).get_target(2).valid;
+
+# ============================================================================
+# Sensors - Measurements and Diagnostics
+# ============================================================================
+
+sensor:
+  # WiFi Signal Strength
+  - platform: wifi_signal
+    name: "WiFi Signal"
+    update_interval: 60s
+    entity_category: diagnostic
+  
+  # Uptime
+  - platform: uptime
+    name: "Uptime"
+    entity_category: diagnostic
+  
+  # Target Count - How many targets are currently detected
+  - platform: ld2460
+    ld2460_id: ld2460_radar
+    target_count:
+      name: "Target Count"
+      icon: mdi:counter
+      filters:
+        - throttle_average: 1s
+  
+  # ============================================================================
+  # Target Position Sensors - Enable for debugging or visualization
+  # Comment out or set disabled_by_default: true for production
+  # ============================================================================
+  
+  # Target 1
+  - platform: ld2460
+    ld2460_id: ld2460_radar
+    target_1:
+      x:
+        name: "Target 1 X"
+        icon: mdi:axis-x-arrow
+        disabled_by_default: true
+        filters:
+          - timeout: ${target_timeout}
+      y:
+        name: "Target 1 Y"
+        icon: mdi:axis-y-arrow
+        disabled_by_default: true
+        filters:
+          - timeout: ${target_timeout}
+      angle:
+        name: "Target 1 Angle"
+        icon: mdi:angle-acute
+        disabled_by_default: true
+        filters:
+          - timeout: ${target_timeout}
+      distance:
+        name: "Target 1 Distance"
+        icon: mdi:ruler
+        disabled_by_default: true
+        filters:
+          - timeout: ${target_timeout}
+  
+  # Target 2
+  - platform: ld2460
+    ld2460_id: ld2460_radar
+    target_2:
+      x:
+        name: "Target 2 X"
+        icon: mdi:axis-x-arrow
+        disabled_by_default: true
+        filters:
+          - timeout: ${target_timeout}
+      y:
+        name: "Target 2 Y"
+        icon: mdi:axis-y-arrow
+        disabled_by_default: true
+        filters:
+          - timeout: ${target_timeout}
+      angle:
+        name: "Target 2 Angle"
+        icon: mdi:angle-acute
+        disabled_by_default: true
+        filters:
+          - timeout: ${target_timeout}
+      distance:
+        name: "Target 2 Distance"
+        icon: mdi:ruler
+        disabled_by_default: true
+        filters:
+          - timeout: ${target_timeout}
+  
+  # Target 3
+  - platform: ld2460
+    ld2460_id: ld2460_radar
+    target_3:
+      x:
+        name: "Target 3 X"
+        icon: mdi:axis-x-arrow
+        disabled_by_default: true
+        filters:
+          - timeout: ${target_timeout}
+      y:
+        name: "Target 3 Y"
+        icon: mdi:axis-y-arrow
+        disabled_by_default: true
+        filters:
+          - timeout: ${target_timeout}
+      angle:
+        name: "Target 3 Angle"
+        icon: mdi:angle-acute
+        disabled_by_default: true
+        filters:
+          - timeout: ${target_timeout}
+      distance:
+        name: "Target 3 Distance"
+        icon: mdi:ruler
+        disabled_by_default: true
+        filters:
+          - timeout: ${target_timeout}
+
+# ============================================================================
+# Buttons - Device Control
+# ============================================================================
+
+button:
+  # Restart the ESP device
+  - platform: restart
+    name: "Restart ESP"
+    entity_category: config
+    icon: mdi:restart
+  
+  # LD2460 specific buttons - matches LD2450 naming
+  - platform: ld2460
+    ld2460_id: ld2460_radar
+    restart:
+      name: "Reboot mmWave Sensor"
+      id: reboot_mmwave_sensor
+      entity_category: config
+      icon: mdi:restart-alert
+    factory_reset:
+      name: "Factory Reset mmWave Sensor"
+      id: factory_reset_mmwave_sensor
+      entity_category: config
+      icon: mdi:restore-alert
+
+# ============================================================================
+# Switch Entities - Configuration
+# ============================================================================
+
+switch:
+  - platform: ld2460
+    ld2460_id: ld2460_radar
+    
+    # Enable/Disable Reporting
+    # Controls whether the sensor sends periodic target data
+    # Useful for reducing UART traffic or debugging
+    reporting:
+      name: "mmWave Reporting"
+      id: mmwave_reporting
+      entity_category: config
+      icon: mdi:radar
+      # Note: Sensor reports by default, switch shows actual state
+      restore_mode: RESTORE_DEFAULT_ON
+
+# ============================================================================
+# Select Entities - Configuration
+# ============================================================================
+
+select:
+  - platform: ld2460
+    ld2460_id: ld2460_radar
+    
+    # Baud Rate Configuration
+    baud_rate:
+      name: "Baud Rate"
+      entity_category: config
+      icon: mdi:speedometer
+    
+    # Installation Mode (Side-mount or Top-mount)
+    installation_mode:
+      name: "Installation Mode"
+      entity_category: config
+      icon: mdi:rotate-3d-variant
+
+# ============================================================================
+# Number Entities - Zone Configuration
+# ============================================================================
+# These allow runtime configuration of zone boundaries from Home Assistant
+# Matches LD2450 entity naming for configuration tool compatibility
+
+number:
+  # Occupancy off delay - matches LD2450
+  - platform: template
+    name: "Occupancy Off Delay"
+    id: off_delay
+    max_value: 600
+    min_value: 0
+    step: 1
+    optimistic: true
+    restore_value: true
+    unit_of_measurement: "s"
+    initial_value: 0
+    entity_category: config
+  
+  # Detection Distance - matches LD2450 naming
+  # Note: This parameter only applies to side-mount installation mode
+  - platform: template
+    name: "Max Distance"
+    id: distance
+    max_value: 800
+    min_value: 0
+    step: 1
+    unit_of_measurement: "cm"
+    mode: box
+    optimistic: false
+    restore_value: true
+    initial_value: 260
+    entity_category: config
+    icon: mdi:ruler
+    set_action:
+      - lambda: |-
+          // Convert cm to meters
+          id(ld2460_radar).set_detection_distance(x / 100.0f);
+    update_interval: never
+  
+  # Installation Angle - matches LD2450 naming
+  # Note: This parameter only applies to side-mount installation mode
+  - platform: template
+    name: "Installation Angle"
+    id: installation_angle_ui
+    unit_of_measurement: "º"
+    min_value: -45
+    max_value: 45
+    step: 1
+    mode: box
+    optimistic: false
+    restore_value: true
+    initial_value: 30
+    icon: "mdi:angle-acute"
+    entity_category: config
+    set_action:
+      - lambda: |-
+          id(ld2460_radar).set_detection_angle(x);
+    update_interval: never
+  
+  # ============================================================================
+  # Zone 1 Configuration - matches LD2450 naming
+  # ============================================================================
+  
+  - platform: template
+    name: "Zone 1 Begin X"
+    id: zone1_begin_x
+    entity_category: config
+    max_value: 8000
+    min_value: -8000
+    step: 10
+    unit_of_measurement: "mm"
+    mode: box
+    icon: mdi:arrow-left
+    optimistic: true
+    restore_value: true
+    initial_value: -4000
+  
+  - platform: template
+    name: "Zone 1 End X"
+    id: zone1_end_x
+    entity_category: config
+    max_value: 8000
+    min_value: -8000
+    step: 10
+    unit_of_measurement: "mm"
+    mode: box
+    icon: mdi:arrow-right
+    optimistic: true
+    restore_value: true
+    initial_value: 4000
+  
+  - platform: template
+    name: "Zone 1 Begin Y"
+    id: zone1_begin_y
+    entity_category: config
+    max_value: 8000
+    min_value: -1560
+    step: 10
+    unit_of_measurement: "mm"
+    mode: box
+    icon: mdi:arrow-collapse-down
+    optimistic: true
+    restore_value: true
+    initial_value: 0
+  
+  - platform: template
+    name: "Zone 1 End Y"
+    id: zone1_end_y
+    entity_category: config
+    max_value: 8000
+    min_value: -1560
+    step: 10
+    unit_of_measurement: "mm"
+    mode: box
+    icon: mdi:arrow-collapse-up
+    optimistic: true
+    restore_value: true
+    initial_value: 6000
+  
+  - platform: template
+    name: "Zone 1 Occupancy Off Delay"
+    id: zone_1_off_delay
+    max_value: 800
+    min_value: 0
+    step: 1
+    optimistic: true
+    restore_value: true
+    unit_of_measurement: "s"
+    initial_value: 0
+    entity_category: config
+  
+  # ============================================================================
+  # Zone 2 Configuration - matches LD2450 naming
+  # ============================================================================
+  
+  - platform: template
+    name: "Zone 2 Begin X"
+    id: zone2_begin_x
+    entity_category: config
+    max_value: 8000
+    min_value: -8000
+    step: 10
+    unit_of_measurement: "mm"
+    mode: box
+    icon: mdi:arrow-left
+    optimistic: true
+    restore_value: true
+    initial_value: -4000
+    disabled_by_default: true
+  
+  - platform: template
+    name: "Zone 2 End X"
+    id: zone2_end_x
+    entity_category: config
+    max_value: 8000
+    min_value: -8000
+    step: 10
+    unit_of_measurement: "mm"
+    mode: box
+    icon: mdi:arrow-right
+    optimistic: true
+    restore_value: true
+    initial_value: 4000
+    disabled_by_default: true
+  
+  - platform: template
+    name: "Zone 2 Begin Y"
+    id: zone2_begin_y
+    entity_category: config
+    max_value: 8000
+    min_value: -1560
+    step: 10
+    unit_of_measurement: "mm"
+    mode: box
+    icon: mdi:arrow-collapse-down
+    optimistic: true
+    restore_value: true
+    initial_value: 0
+    disabled_by_default: true
+  
+  - platform: template
+    name: "Zone 2 End Y"
+    id: zone2_end_y
+    entity_category: config
+    max_value: 8000
+    min_value: -1560
+    step: 10
+    unit_of_measurement: "mm"
+    mode: box
+    icon: mdi:arrow-collapse-up
+    optimistic: true
+    restore_value: true
+    initial_value: 6000
+    disabled_by_default: true
+  
+  - platform: template
+    name: "Zone 2 Occupancy Off Delay"
+    id: zone_2_off_delay
+    max_value: 800
+    min_value: 0
+    step: 1
+    optimistic: true
+    restore_value: true
+    unit_of_measurement: "s"
+    initial_value: 0
+    entity_category: config
+    disabled_by_default: true
+  
+  # ============================================================================
+  # Zone 3 Configuration - matches LD2450 naming
+  # ============================================================================
+  
+  - platform: template
+    name: "Zone 3 Begin X"
+    id: zone3_begin_x
+    entity_category: config
+    max_value: 8000
+    min_value: -8000
+    step: 10
+    unit_of_measurement: "mm"
+    mode: box
+    icon: mdi:arrow-left
+    optimistic: true
+    restore_value: true
+    initial_value: -4000
+    disabled_by_default: true
+  
+  - platform: template
+    name: "Zone 3 End X"
+    id: zone3_end_x
+    entity_category: config
+    max_value: 8000
+    min_value: -8000
+    step: 10
+    unit_of_measurement: "mm"
+    mode: box
+    icon: mdi:arrow-right
+    optimistic: true
+    restore_value: true
+    initial_value: 4000
+    disabled_by_default: true
+  
+  - platform: template
+    name: "Zone 3 Begin Y"
+    id: zone3_begin_y
+    entity_category: config
+    max_value: 8000
+    min_value: -1560
+    step: 10
+    unit_of_measurement: "mm"
+    mode: box
+    icon: mdi:arrow-collapse-down
+    optimistic: true
+    restore_value: true
+    initial_value: 0
+    disabled_by_default: true
+  
+  - platform: template
+    name: "Zone 3 End Y"
+    id: zone3_end_y
+    entity_category: config
+    max_value: 8000
+    min_value: -1560
+    step: 10
+    unit_of_measurement: "mm"
+    mode: box
+    icon: mdi:arrow-collapse-up
+    optimistic: true
+    restore_value: true
+    initial_value: 6000
+    disabled_by_default: true
+  
+  - platform: template
+    name: "Zone 3 Occupancy Off Delay"
+    id: zone_3_off_delay
+    max_value: 800
+    min_value: 0
+    step: 1
+    optimistic: true
+    restore_value: true
+    unit_of_measurement: "s"
+    initial_value: 0
+    entity_category: config
+    disabled_by_default: true
+  
+  # ============================================================================
+  # Zone 4 Configuration - matches LD2450 naming
+  # ============================================================================
+  
+  - platform: template
+    name: "Zone 4 Begin X"
+    id: zone4_begin_x
+    entity_category: config
+    max_value: 8000
+    min_value: -8000
+    step: 10
+    unit_of_measurement: "mm"
+    mode: box
+    icon: mdi:arrow-left
+    optimistic: true
+    restore_value: true
+    initial_value: -4000
+    disabled_by_default: true
+  
+  - platform: template
+    name: "Zone 4 End X"
+    id: zone4_end_x
+    entity_category: config
+    max_value: 8000
+    min_value: -8000
+    step: 10
+    unit_of_measurement: "mm"
+    mode: box
+    icon: mdi:arrow-right
+    optimistic: true
+    restore_value: true
+    initial_value: 4000
+    disabled_by_default: true
+  
+  - platform: template
+    name: "Zone 4 Begin Y"
+    id: zone4_begin_y
+    entity_category: config
+    max_value: 8000
+    min_value: -1560
+    step: 10
+    unit_of_measurement: "mm"
+    mode: box
+    icon: mdi:arrow-collapse-down
+    optimistic: true
+    restore_value: true
+    initial_value: 0
+    disabled_by_default: true
+  
+  - platform: template
+    name: "Zone 4 End Y"
+    id: zone4_end_y
+    entity_category: config
+    max_value: 8000
+    min_value: -1560
+    step: 10
+    unit_of_measurement: "mm"
+    mode: box
+    icon: mdi:arrow-collapse-up
+    optimistic: true
+    restore_value: true
+    initial_value: 6000
+    disabled_by_default: true
+  
+  - platform: template
+    name: "Zone 4 Occupancy Off Delay"
+    id: zone_4_off_delay
+    max_value: 800
+    min_value: 0
+    step: 1
+    optimistic: true
+    restore_value: true
+    unit_of_measurement: "s"
+    initial_value: 0
+    entity_category: config
+    disabled_by_default: true
+
+# ============================================================================
+# EXAMPLE: Automations for Integration
+# ============================================================================
+# Uncomment and modify as needed
+
+# Example: Turn on lights when Zone 1 (Living Room) is occupied
+# - automation:
+#     - id: zone1_lights_on
+#       trigger:
+#         - platform: state
+#           entity_id: binary_sensor.zone_1_occupancy
+#           to: 'on'
+#       action:
+#         - service: light.turn_on
+#           target:
+#             entity_id: light.living_room
+#
+# - automation:
+#     - id: zone1_lights_off
+#       trigger:
+#         - platform: state
+#           entity_id: binary_sensor.zone_1_occupancy
+#           to: 'off'
+#           for:
+#             minutes: 5
+#       action:
+#         - service: light.turn_off
+#           target:
+#             entity_id: light.living_room
+
+# ============================================================================
+# NOTES FOR UI TOOL INTEGRATION
+# ============================================================================
+# 
+# Entity Types Exposed:
+#   - text_sensor.zone_status_json - JSON with all zone data
+#   - binary_sensor.zone_X_occupancy - Individual zone occupancy (4 zones)
+#   - sensor.target_X_x/y - Target positions for visualization (optional)
+#   - number.zone_X_x1/y1/x2/y2 - Zone boundary configuration (16 numbers)
+#   - select.installation_mode - Side/Top mount configuration
+#   - button.restart_sensor - Restart sensor
+#   - button.factory_reset_sensor - Reset to defaults
+#
+# JSON Format:
+#   {"zones":[
+#     {"id":1,"name":"Living Room","count":0,"occupied":false},
+#     {"id":2,"name":"Hallway","count":0,"occupied":false},
+#     {"id":3,"name":"Kitchen","count":0,"occupied":false},
+#     {"id":4,"name":"Bedroom","count":0,"occupied":false}
+#   ]}
+#
+# Zone Naming:
+#   - Modify the lambda in zone_status_json text sensor
+#   - Or parse/override in your UI tool
+#
+# Adding More Zones:
+#   1. Add zone globals (x1, y1, x2, y2)
+#   2. Add zone boundary numbers
+#   3. Add zone occupancy binary sensor
+#   4. Update zone_status_json lambda
+#
+# ============================================================================

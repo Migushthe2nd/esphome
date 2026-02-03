@@ -1,0 +1,7 @@
+uart:
+  - id: uart_ld2460
+    tx_pin: 17
+    rx_pin: 16
+    baud_rate: 256000
+
+<<: !include common.yaml

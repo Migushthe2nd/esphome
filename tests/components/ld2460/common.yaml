@@ -1,0 +1,69 @@
+ld2460:
+  - id: ld2460_radar
+
+button:
+  - platform: ld2460
+    ld2460_id: ld2460_radar
+    factory_reset:
+      name: LD2460 Factory Reset
+    restart:
+      name: LD2460 Restart
+
+sensor:
+  - platform: ld2460
+    ld2460_id: ld2460_radar
+    target_count:
+      name: Target Count
+    target_1:
+      x:
+        name: Target-1 X
+      y:
+        name: Target-1 Y
+      angle:
+        name: Target-1 Angle
+      distance:
+        name: Target-1 Distance
+    target_2:
+      x:
+        name: Target-2 X
+      y:
+        name: Target-2 Y
+      angle:
+        name: Target-2 Angle
+      distance:
+        name: Target-2 Distance
+    target_3:
+      x:
+        name: Target-3 X
+      y:
+        name: Target-3 Y
+      angle:
+        name: Target-3 Angle
+      distance:
+        name: Target-3 Distance
+
+binary_sensor:
+  - platform: ld2460
+    ld2460_id: ld2460_radar
+    has_target:
+      name: Presence
+
+switch:
+  - platform: ld2460
+    ld2460_id: ld2460_radar
+    reporting:
+      name: Reporting
+
+text_sensor:
+  - platform: ld2460
+    ld2460_id: ld2460_radar
+    version:
+      name: LD2460 Firmware
+
+select:
+  - platform: ld2460
+    ld2460_id: ld2460_radar
+    baud_rate:
+      name: Baud Rate
+    installation_mode:
+      name: Installation Mode
